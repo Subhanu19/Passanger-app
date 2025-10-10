@@ -39,13 +39,13 @@ export default function AppNavigator() {
         <Stack.Screen
           name="BusList"
           component={BusListScreen}
-          options={{ title: "Available Buses" }}
+          options={{ headerShown: false }}
         />
 
         <Stack.Screen
           name="Schedule"
           component={ScheduleScreen}
-          options={{ title: "Bus Schedule" }}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
