@@ -13,6 +13,9 @@ import { useRoute } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import webSocketService from "../services/WebSocketService";
 
+// Create animated FlatList
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
+
 // Distance calculation (Haversine formula)
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3; // Earth radius in meters
@@ -44,7 +47,10 @@ export default function ScheduleScreen() {
   const [location, setLocation] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("connecting");
 
+  const scrollY = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
+  const flatListRef = useRef(null);
+  
   const ITEM_HEIGHT = 100; // row height
   const { width: screenWidth } = Dimensions.get('window');
 
@@ -143,7 +149,9 @@ export default function ScheduleScreen() {
       }
     });
 
-   
+    return () => {
+      unsubscribe();
+    };
   }, [busData.bus_id, currentStopIndex, translateY]);
 
   // ----- Render each stop -----
@@ -226,6 +234,9 @@ export default function ScheduleScreen() {
     }
   };
 
+  // Calculate bus position combining scroll and GPS position
+  const busPosition = Animated.add(translateY, Animated.multiply(scrollY, -1));
+
   // ----- Loading -----
   if (loading) {
     return (
@@ -280,15 +291,29 @@ export default function ScheduleScreen() {
 
       {/* Schedule List with Animated Bus */}
       <View style={styles.scheduleContainer}>
-        <FlatList
+        <AnimatedFlatList
+          ref={flatListRef}
           data={busData.stops}
           renderItem={renderStop}
           keyExtractor={(item, index) => `${item.stop_sequence}_${index}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
         />
 
-        <Animated.View style={[styles.busIcon, { transform: [{ translateY }] }]}>
+        {/* Animated Bus that moves with scroll and GPS */}
+        <Animated.View 
+          style={[
+            styles.busIcon, 
+            { 
+              transform: [{ translateY: busPosition }] 
+            }
+          ]}
+        >
           <View style={[styles.busIconContainer, { backgroundColor: theme.primary }]}>
             <Text style={styles.busEmoji}>🚍</Text>
           </View>
@@ -345,7 +370,12 @@ const createStyles = (theme) =>
     timeContainer: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
     timeLabel: { fontSize: 13, fontWeight: "500", width: 70 },
     time: { fontSize: 14, fontWeight: "600" },
-    busIcon: { position: "absolute", left: 20, top: 0 },
+    busIcon: { 
+      position: "absolute", 
+      left: 20, 
+      top: 16,
+      zIndex: 1000,
+    },
     busIconContainer: {
       width: 32,
       height: 32,

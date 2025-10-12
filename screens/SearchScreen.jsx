@@ -799,3 +799,4 @@ const createStyles = (theme) => StyleSheet.create({
     color: theme.secondary,
   },
 });
+
