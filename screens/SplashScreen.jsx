@@ -1,3 +1,4 @@
+
 // screens/SplashScreen.js
 import React, { useEffect, useRef } from "react";
 import { View, StyleSheet, Animated } from "react-native";
@@ -50,7 +51,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Animated.Image
-        source={require("../assets/icon.png")}
+        source={require("../assets/logo.png")}
         style={[
           styles.logo,
           {
@@ -66,7 +67,7 @@ export default function SplashScreen() {
           { opacity: fadeAnim, transform: [{ translateY: bumpAnim }] },
         ]}
       >
-        BusBuddy
+        YELLOH BUS
       </Animated.Text>
 
       <Animated.Text style={[styles.subtitle, { opacity: fadeAnim }]}>
@@ -84,8 +85,8 @@ const createStyles = (theme) => StyleSheet.create({
     alignItems: "center",
   },
   logo: {
-    width: 130,
-    height: 130,
+    width: 220,
+    height: 230,
     marginBottom: 20,
     resizeMode: "contain",
   },

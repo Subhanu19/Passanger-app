@@ -224,8 +224,7 @@ export default function SearchScreen() {
     <View style={styles.headerSection}>
       <View style={styles.headerRow}>
         <View style={styles.titleContainer}>
-          <Text style={styles.appTitle}>BusBuddy</Text>
-          <Text style={styles.appSubtitle}>Find your perfect bus route</Text>
+          <Text style={styles.appTitle}>YELLOH BUS</Text>
         </View>
         <TouchableOpacity style={styles.themeToggle} onPress={toggleTheme}>
           <Text style={styles.themeToggleText}>{isDarkMode ? "☀️" : "🌙"}</Text>
@@ -428,6 +427,7 @@ const createStyles = (theme) => StyleSheet.create({
     padding: 20,
   },
   headerSection: {
+    padding :50,
     marginBottom: 24,
   },
   headerRow: {
@@ -439,6 +439,8 @@ const createStyles = (theme) => StyleSheet.create({
     flex: 1,
   },
   appTitle: {
+    marginTop:10,
+    marginLeft : 35,
     fontSize: 32,
     fontWeight: "800",
     color: theme.primary,
@@ -451,6 +453,7 @@ const createStyles = (theme) => StyleSheet.create({
     fontWeight: "500",
   },
   themeToggle: {
+    marginRight: -50,
     padding: 12,
     borderRadius: 24,
     backgroundColor: theme.primary + '15',

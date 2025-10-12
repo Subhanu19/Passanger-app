@@ -296,6 +296,7 @@ const createStyles = (theme) =>
       alignItems: "center",
     },
     header: {
+      marginTop:50,
       fontSize: 24,
       fontWeight: "800",
       marginBottom: 8,
