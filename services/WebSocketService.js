@@ -20,7 +20,6 @@ class WebSocketService {
     };
 
     this.ws.onclose = (e) => console.warn("⚠️ WebSocket closed", e.code, e.reason);
-    this.ws.onerror = (err) => console.error("❌ WebSocket error:", err.message);
 
     this.ws.onmessage = (event) => {
       try {

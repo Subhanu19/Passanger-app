@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,17 +7,33 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  Animated,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import webSocketService from "../services/WebSocketService";
+
+// Helper to calculate distance (Haversine formula)
+function getDistance(lat1, lon1, lat2, lon2) {
+  const toRad = (x) => (x * Math.PI) / 180;
+  const R = 6371; // km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // km
+}
 
 export default function BusListScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { theme } = useTheme();
 
-  // Extract all possible parameters
   const {
     src,
     dest,
@@ -33,33 +49,33 @@ export default function BusListScreen() {
   const [loading, setLoading] = useState(!initialBuses);
   const [error, setError] = useState(null);
 
-  // Determine actual source and destination from different parameter names
   const actualSource = src || source;
   const actualDestination = dest || destination;
 
-  // ----- Fetch buses if not passed via route params -----
+  // Animation ref (for smooth bus movement)
+  const busAnim = useRef(new Animated.Value(0)).current;
+  const [currentStopIndex, setCurrentStopIndex] = useState(null);
+  const [initialized, setInitialized] = useState(false);
+
+  // ----- Fetch buses -----
   useEffect(() => {
-    // If we already have buses, don't fetch again
     if (initialBuses && initialBuses.length > 0) {
       setLoading(false);
       return;
     }
 
-    // For bus number search, we should have received the bus data directly
-    if (searchType === "busNo" && busNumber) {
-      setLoading(false);
-      return;
-    }
-
-    // For source-destination search without initial data, fetch from API
     const fetchBusRoutes = async () => {
       try {
         setLoading(true);
         setError(null);
-        
         let url = "";
-        
-        if (searchType === "srcDestStop" && actualSource && actualDestination && stop) {
+
+        if (
+          searchType === "srcDestStop" &&
+          actualSource &&
+          actualDestination &&
+          stop
+        ) {
           url = `https://yus.kwscloud.in/yus/src-${actualSource}&dest-${actualDestination}&stop-${stop}`;
         } else if (actualSource && actualDestination) {
           url = `https://yus.kwscloud.in/yus/src-${actualSource}&dest-${actualDestination}`;
@@ -79,50 +95,72 @@ export default function BusListScreen() {
         }
       } catch (err) {
         console.error("Error fetching bus routes:", err);
-        setError("Failed to load buses. Please check your connection and try again.");
+        setError("Failed to load buses. Please check your connection.");
       } finally {
         setLoading(false);
       }
     };
 
-    if (actualSource && actualDestination) {
-      fetchBusRoutes();
-    } else {
-      setLoading(false);
-    }
+    if (actualSource && actualDestination) fetchBusRoutes();
   }, [actualSource, actualDestination, stop, searchType, busNumber, initialBuses]);
 
-  // ----- WebSocket: Subscribe for real-time updates -----
+  // ----- WebSocket: Real-time updates -----
   useEffect(() => {
-    // Only subscribe to WebSocket if we're using source-destination search
-    if (searchType === "srcDest" && actualSource && actualDestination) {
-      const unsubscribe = webSocketService.subscribe((data) => {
-        // Handle array of buses from search
-        if (Array.isArray(data)) {
-          setBuses(data);
-        }
-        // Handle individual bus updates
-        else if (data.type === "bus_update") {
-          setBuses((prev) =>
-            prev.map((bus) =>
-              bus.bus_id === data.bus_id ? { ...bus, ...data } : bus
-            )
+    const unsubscribe = webSocketService.subscribe((data) => {
+      if (!data || !data.latitude || !data.longitude) return;
+
+      const lat = parseFloat(data.latitude);
+      const lon = parseFloat(data.longitude);
+
+      // Find nearest stop
+      if (buses.length > 0 && buses[0]?.stops?.length > 0) {
+        const stops = buses[0].stops;
+        let nearestIndex = 0;
+        let minDist = Infinity;
+
+        for (let i = 0; i < stops.length; i++) {
+          const stop = stops[i];
+          if (!stop.latitude || !stop.longitude) continue;
+
+          const dist = getDistance(
+            lat,
+            lon,
+            parseFloat(stop.latitude),
+            parseFloat(stop.longitude)
           );
+          if (dist < minDist) {
+            minDist = dist;
+            nearestIndex = i;
+          }
         }
-      });
 
-      return () => unsubscribe();
-    }
-  }, [searchType, actualSource, actualDestination]);
+        if (!initialized) {
+          // Jump immediately on first update
+          setCurrentStopIndex(nearestIndex);
+          busAnim.setValue(nearestIndex);
+          setInitialized(true);
+        } else {
+          // Smoothly animate to new position
+          Animated.timing(busAnim, {
+            toValue: nearestIndex,
+            duration: 800,
+            useNativeDriver: false,
+          }).start();
+          setCurrentStopIndex(nearestIndex);
+        }
+      }
+    });
 
-  // ----- Handle bus selection -----
+    return () => unsubscribe();
+  }, [buses, initialized]);
+
+  // ----- Bus card press -----
   const handleBusPress = (bus) => {
     if (!bus || !bus.bus_id) {
       Alert.alert("Error", "Invalid bus data");
       return;
     }
 
-    // Send selected bus info to server via WebSocket
     const payload = {
       action: "select_bus",
       bus_id: bus.bus_id,
@@ -134,10 +172,7 @@ export default function BusListScreen() {
     };
 
     webSocketService.send(payload);
-    console.log("📤 Sent bus selection via WebSocket:", payload);
-
-    // Navigate to schedule screen with complete bus object
-    navigation.navigate("Schedule", { 
+    navigation.navigate("Schedule", {
       busObject: bus,
       searchType,
       busNumber: searchType === "busNo" ? busNumber : null,
@@ -148,78 +183,88 @@ export default function BusListScreen() {
   };
 
   // ----- Render bus card -----
-  const renderBusCard = ({ item }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card, 
-        { borderColor: theme.primary },
-        pressed && styles.cardPressed
-      ]}
-      onPress={() => handleBusPress(item)}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={[styles.busNumber, { color: theme.primary }]}>
-          Bus #{item.bus_id}
-        </Text>
-        <Text style={[styles.duration, { color: theme.textLight }]}>
-          {item.stops?.length || 0} stops
-        </Text>
-      </View>
+  const renderBusCard = ({ item }) => {
+    const activeIndex = currentStopIndex;
 
-      <Text style={[styles.route, { color: theme.textDark }]}>
-        {item.route_name}
-      </Text>
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.card,
+          { borderColor: theme.primary },
+          pressed && styles.cardPressed,
+        ]}
+        onPress={() => handleBusPress(item)}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={[styles.busNumber, { color: theme.primary }]}>
+            Bus #{item.bus_id}
+          </Text>
+          <Text style={[styles.duration, { color: theme.textLight }]}>
+            {item.stops?.length || 0} stops
+          </Text>
+        </View>
 
-      <View style={styles.routeInfo}>
-        <Text style={[styles.time, { color: theme.textDark }]}>
-          {item.stops?.[0]?.departure_time || "08:00"}
+        <Text style={[styles.route, { color: theme.textDark }]}>
+          {item.route_name}
         </Text>
-        <Text style={[styles.arrow, { color: theme.primary }]}>→</Text>
-        <Text style={[styles.time, { color: theme.textDark }]}>
-          {item.stops?.[item.stops?.length - 1]?.arrival_time || "09:00"}
-        </Text>
-      </View>
 
-      <Text style={[styles.direction, { color: theme.textLight }]}>
-        {item.src || actualSource} → {item.dest || actualDestination}
-      </Text>
-
-      {item.stops && item.stops.length > 0 && (
-        <Text style={[styles.stops, { color: theme.textLight }]} numberOfLines={1}>
-          {item.stops.slice(0, 3).map(s => s.location_name).join(" → ")}
-          {item.stops.length > 3 ? " ..." : ""}
-        </Text>
-      )}
-    </Pressable>
-  );
-
-  // ----- Get header title based on search type -----
-  const getHeaderTitle = () => {
-    if (searchType === "busNo" && busNumber) {
-      return `Bus #${busNumber}`;
-    } else if (searchType === "srcDestStop" && actualSource && actualDestination && stop) {
-      return `${actualSource} → ${stop} → ${actualDestination}`;
-    } else if (actualSource && actualDestination) {
-      return `${actualSource} → ${actualDestination}`;
-    } else {
-      return "Available Buses";
-    }
+        {/* <View style={styles.stopList}>
+          {item.stops?.map((stop, index) => {
+            const isActive = index === activeIndex;
+            return (
+              <View key={index} style={styles.stopRow}>
+                <View
+                  style={[
+                    styles.stopDot,
+                    {
+                      backgroundColor: isActive
+                        ? theme.primary
+                        : theme.textLight,
+                      transform: [{ scale: isActive ? 1.2 : 1 }],
+                    },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.stopText,
+                    {
+                      color: isActive ? theme.primary : theme.textDark,
+                      fontWeight: isActive ? "700" : "400",
+                    },
+                  ]}
+                >
+                  {stop.location_name}
+                </Text>
+              </View>
+            );
+          })}
+        </View> */}
+      </Pressable>
+    );
   };
 
-  // ----- Get subtitle based on search type -----
+  const getHeaderTitle = () => {
+    if (searchType === "busNo" && busNumber) return `Bus #${busNumber}`;
+    else if (
+      searchType === "srcDestStop" &&
+      actualSource &&
+      actualDestination &&
+      stop
+    )
+      return `${actualSource} → ${stop} → ${actualDestination}`;
+    else if (actualSource && actualDestination)
+      return `${actualSource} → ${actualDestination}`;
+    else return "Available Buses";
+  };
+
   const getSubtitle = () => {
-    if (searchType === "busNo") {
-      return "Bus details";
-    } else if (searchType === "srcDestStop") {
-      return `Via ${stop}`;
-    } else {
-      return `${buses.length} bus${buses.length !== 1 ? 'es' : ''} found`;
-    }
+    if (searchType === "busNo") return "Bus details";
+    else if (searchType === "srcDestStop") return `Via ${stop}`;
+    else return `${buses.length} bus${buses.length !== 1 ? "es" : ""} found`;
   };
 
   const styles = createStyles(theme);
 
-  // ----- Loading state -----
   if (loading) {
     return (
       <View style={styles.loader}>
@@ -231,7 +276,6 @@ export default function BusListScreen() {
     );
   }
 
-  // ----- Error state -----
   if (error) {
     return (
       <View style={styles.container}>
@@ -240,7 +284,7 @@ export default function BusListScreen() {
           <Text style={[styles.errorText, { color: theme.textLight }]}>
             {error}
           </Text>
-          <Pressable 
+          <Pressable
             style={[styles.retryButton, { backgroundColor: theme.primary }]}
             onPress={() => navigation.goBack()}
           >
@@ -253,7 +297,6 @@ export default function BusListScreen() {
     );
   }
 
-  // ----- Main render -----
   return (
     <View style={styles.container}>
       <View style={styles.headerSection}>
@@ -265,7 +308,9 @@ export default function BusListScreen() {
 
       <FlatList
         data={buses}
-        keyExtractor={(item) => item.bus_id?.toString() || Math.random().toString()}
+        keyExtractor={(item) =>
+          item.bus_id?.toString() || Math.random().toString()
+        }
         renderItem={renderBusCard}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
@@ -296,7 +341,7 @@ const createStyles = (theme) =>
       alignItems: "center",
     },
     header: {
-      marginTop:50,
+      marginTop: 50,
       fontSize: 24,
       fontWeight: "800",
       marginBottom: 8,
@@ -347,46 +392,23 @@ const createStyles = (theme) =>
       fontWeight: "700",
       marginBottom: 12,
     },
-    routeInfo: {
+    stopList: {
+      marginTop: 8,
+      paddingLeft: 8,
+    },
+    stopRow: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 8,
+      marginBottom: 6,
     },
-    time: {
-      fontSize: 16,
-      fontWeight: "600",
+    stopDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: 10,
     },
-    arrow: {
-      fontSize: 18,
-      fontWeight: "bold",
-      marginHorizontal: 12,
-    },
-    direction: {
+    stopText: {
       fontSize: 15,
-      fontWeight: "500",
-      textAlign: "center",
-      marginBottom: 8,
-    },
-    stops: {
-      fontSize: 13,
-      fontWeight: "400",
-      textAlign: "center",
-    },
-    emptyContainer: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 60,
-    },
-    noData: {
-      fontSize: 18,
-      fontWeight: "600",
-      textAlign: "center",
-      marginBottom: 8,
-    },
-    noDataSubtitle: {
-      fontSize: 14,
-      textAlign: "center",
     },
     loader: {
       flex: 1,
@@ -423,3 +445,4 @@ const createStyles = (theme) =>
       textAlign: "center",
     },
   });
+
