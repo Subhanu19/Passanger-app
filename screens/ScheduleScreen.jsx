@@ -1,4 +1,3 @@
-// ScheduleScreen.jsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -574,7 +573,7 @@ export default function ScheduleScreen() {
             style={[
               styles.circle,
               {
-                backgroundColor: isActive ? theme.primary : isCompleted ? "#FFD700" : theme.border,
+                backgroundColor: isActive ? theme.primary : isCompleted ? theme.accent : theme.border,
               },
             ]}
           />
@@ -590,7 +589,7 @@ export default function ScheduleScreen() {
           {/* Stop Details - Center */}
           <View style={[styles.stopDetails, { borderBottomColor: theme.border }]}>
             <View style={styles.stopHeader}>
-              <Text style={[styles.stopName, { color: isActive ? theme.primary : isCompleted ? "#FFD700" : theme.textDark }]}>
+              <Text style={[styles.stopName, { color: isActive ? theme.primary : isCompleted ? theme.accent : theme.textDark }]}>
                 {item.location_name}
               </Text>
               {isActive && (
@@ -599,8 +598,8 @@ export default function ScheduleScreen() {
                 </View>
               )}
               {reached && (
-                <View style={{ marginLeft: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#2b8a3e", borderRadius: 8 }}>
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 11 }}>REACHED</Text>
+                <View style={[styles.reachedBadge, { backgroundColor: "#2b8a3e" }]}>
+                  <Text style={styles.reachedBadgeText}>REACHED</Text>
                 </View>
               )}
             </View>
@@ -652,7 +651,7 @@ export default function ScheduleScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerSection}>
+      <View style={[styles.headerSection, { backgroundColor: theme.primary }]}>
         <Text style={styles.title}>{busData.route_name}</Text>
         <Text style={styles.subtitle}>
           Bus #{busData.bus_id} - {isUpRoute ? "UP Route (Morning)" : "DOWN Route (Evening)"} - Live Tracking
@@ -682,7 +681,7 @@ export default function ScheduleScreen() {
         </View>
       </View>
 
-      <View style={[styles.footer, { borderTopColor: theme.border }]}>
+      <View style={[styles.footer, { borderTopColor: theme.border, backgroundColor: theme.secondary }]}>
         <Text style={[styles.locationTitle, { color: theme.textDark }]}>
           Current Location:
         </Text>
@@ -707,44 +706,62 @@ export default function ScheduleScreen() {
 // ===== Styles =====
 const createStyles = (theme) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: theme.secondary },
+    container: { 
+      flex: 1, 
+      backgroundColor: theme.background 
+    },
     loader: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: theme.secondary,
+      backgroundColor: theme.background,
     },
-    loadingText: { marginTop: 16, fontSize: 16, fontWeight: "500" },
+    loadingText: { 
+      marginTop: 16, 
+      fontSize: 16, 
+      fontWeight: "500" 
+    },
     headerSection: {
       padding: 50,
       zIndex: 100,
       paddingBottom: 16,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
-      backgroundColor: "#FFD700",
     },
     title: {
       fontSize: 24,
       fontWeight: "800",
-      color: "black",
+      color: theme.secondary,
       marginBottom: 4,
       textAlign: "center",
     },
     subtitle: {
       fontSize: 14,
-      color: theme.textLight,
+      color: theme.secondary,
       marginBottom: 16,
       textAlign: "center",
       fontWeight: "500",
+      opacity: 0.9,
     },
-    scheduleContainer: { flex: 1, position: "relative" },
-    listContent: { padding: 16, paddingBottom: 100 },
+    scheduleContainer: { 
+      flex: 1, 
+      position: "relative",
+      backgroundColor: theme.background,
+    },
+    listContent: { 
+      padding: 16, 
+      paddingBottom: 100 
+    },
     stopContainer: {
       flexDirection: "row",
       alignItems: "flex-start",
       height: ITEM_HEIGHT,
     },
-    timeline: { width: 40, alignItems: "center", justifyContent: "flex-start" },
+    timeline: { 
+      width: 40, 
+      alignItems: "center", 
+      justifyContent: "flex-start" 
+    },
     fullLine: {
       position: "absolute",
       top: 8,
@@ -756,7 +773,7 @@ const createStyles = (theme) =>
       position: "absolute",
       top: 8,
       width: 2,
-      backgroundColor: "#FFD700",
+      backgroundColor: theme.accent,
     },
     circle: {
       width: 16,
@@ -812,6 +829,17 @@ const createStyles = (theme) =>
       fontSize: 10,
       fontWeight: "800",
     },
+    reachedBadge: {
+      marginLeft: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    reachedBadgeText: {
+      color: theme.secondary,
+      fontWeight: "700",
+      fontSize: 11,
+    },
     scheduleSection: {},
     timeRow: {
       flexDirection: "row",
@@ -834,11 +862,12 @@ const createStyles = (theme) =>
       justifyContent: "center",
       alignItems: "center",
     },
-    busEmoji: { fontSize: 16 },
+    busEmoji: { 
+      fontSize: 16 
+    },
     footer: {
       padding: 16,
       borderTopWidth: 1,
-      backgroundColor: theme.secondary,
     },
     locationTitle: {
       fontSize: 14,
