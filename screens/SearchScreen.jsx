@@ -10,16 +10,22 @@ import {
   Alert,
   ScrollView,
   Animated,
+  Modal,
+  Dimensions,
 } from "react-native";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
-import { useTheme } from "../context/ThemeContext";
+import LightTheme from "../constants/Colours";
 import webSocketService from "../services/WebSocketService";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const DRAWER_WIDTH = SCREEN_WIDTH * 0.75;
 
 export default function SearchScreen() {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
-  const { theme, isDarkMode, toggleTheme } = useTheme();
+  const theme = LightTheme;
 
   const [searchType, setSearchType] = useState("srcDest");
   const [source, setSource] = useState("");
@@ -29,6 +35,8 @@ export default function SearchScreen() {
   const [busPreview, setBusPreview] = useState(null);
   const [busList, setBusList] = useState([]);
   const [buttonScale] = useState(new Animated.Value(1));
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const drawerAnimation = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
   const styles = createStyles(theme);
 
@@ -71,6 +79,25 @@ export default function SearchScreen() {
     const temp = source;
     setSource(destination);
     setDestination(temp);
+  };
+
+  // Drawer animation
+  const openDrawer = () => {
+    setDrawerVisible(true);
+    Animated.spring(drawerAnimation, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start();
+  };
+
+  const closeDrawer = () => {
+    Animated.timing(drawerAnimation, {
+      toValue: -DRAWER_WIDTH,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => setDrawerVisible(false));
   };
 
   // Fetch bus preview
@@ -175,53 +202,158 @@ export default function SearchScreen() {
     }
   };
 
-  // Render Components
+  const renderDrawer = () => (
+    <Modal
+      visible={drawerVisible}
+      transparent
+      animationType="none"
+      onRequestClose={closeDrawer}
+    >
+      <View style={styles.drawerOverlay}>
+        <TouchableOpacity 
+          style={styles.drawerBackdrop} 
+          activeOpacity={1} 
+          onPress={closeDrawer}
+        />
+        <Animated.View
+          style={[
+            styles.drawerContainer,
+            { transform: [{ translateX: drawerAnimation }] },
+          ]}
+        >
+          <View style={styles.drawerContent}>
+            {/* Header Section with Logo and App Name */}
+            <View style={styles.drawerHeader}>
+              <View style={styles.logoContainer}>
+                <View style={styles.logoCircle}>
+                  <Ionicons name="bus" size={40} color="#D4A53A" />
+                </View>
+              </View>
+              <Text style={styles.drawerAppName}>YELLOH BUS</Text>
+              <Text style={styles.drawerVersion}>v 1.0.0</Text>
+            </View>
+
+            {/* Menu Items */}
+            <View style={styles.drawerMenuSection}>
+              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
+                closeDrawer();
+                // Navigate or perform action
+              }}>
+                <Ionicons name="home-outline" size={24} color="#333" />
+                <Text style={styles.drawerMenuText}>Home</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
+                closeDrawer();
+                // Navigate to timetable
+              }}>
+                <Ionicons name="time-outline" size={24} color="#333" />
+                <Text style={styles.drawerMenuText}>Timetable</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
+                closeDrawer();
+                // Navigate to settings
+              }}>
+                <Ionicons name="settings-outline" size={24} color="#333" />
+                <Text style={styles.drawerMenuText}>Settings</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
+                closeDrawer();
+                // Navigate to help
+              }}>
+                <Ionicons name="help-circle-outline" size={24} color="#333" />
+                <Text style={styles.drawerMenuText}>Help & Support</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
+                closeDrawer();
+                // Navigate to about
+              }}>
+                <Ionicons name="information-circle-outline" size={24} color="#333" />
+                <Text style={styles.drawerMenuText}>About</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
+                closeDrawer();
+                // Share app
+              }}>
+                <Ionicons name="share-social-outline" size={24} color="#333" />
+                <Text style={styles.drawerMenuText}>Share App</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
+                closeDrawer();
+                // Rate app
+              }}>
+                <Ionicons name="star-outline" size={24} color="#333" />
+                <Text style={styles.drawerMenuText}>Rate Us</Text>
+              </TouchableOpacity>
+
+              <View style={styles.menuDivider} />
+
+              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
+                closeDrawer();
+                // Clear searches
+              }}>
+                <Ionicons name="trash-outline" size={24} color="#333" />
+                <Text style={styles.drawerMenuText}>Clear Recent Searches</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.drawerFooter}>
+              <Text style={styles.drawerFooterText}>Made with 💬 for better commute</Text>
+            </View>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+
   const renderHeader = () => (
     <View style={styles.headerSection}>
-      <View style={styles.headerRow}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.appTitle}>YELLOH BUS</Text>
-          <Text style={styles.appSubtitle}>Plan your journey effortlessly</Text>
-        </View>
-        <TouchableOpacity style={styles.themeToggle} onPress={toggleTheme}>
-          <Ionicons 
-            name={isDarkMode ? "sunny" : "moon"} 
-            size={20} 
-            color={theme.textSecondary} 
-          />
-        </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.hamburgerButton}
+        onPress={openDrawer}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="menu" size={28} color="#000" />
+      </TouchableOpacity>
+      <View style={styles.headerTitleContainer}>
+        <Text style={styles.headerTitle}>YELLOH BUS</Text>
       </View>
     </View>
   );
 
   const renderSearchTypeSelector = () => (
     <View style={styles.searchTypeSection}>
+      <View style={{ marginTop: 40 }} />
       <Text style={styles.sectionLabel}>Choose Search Method</Text>
       <View style={styles.searchTypeContainer}>
         {[
           { 
-            key: "busNo", 
-            label: "BUS NO", 
-            icon: <FontAwesome5 name="bus" size={16} color={searchType === "busNo" ? theme.secondary : theme.textSecondary} />
-          },
-          { 
             key: "srcDest", 
             label: "DIRECT", 
-            icon: <MaterialIcons name="route" size={20} color={searchType === "srcDest" ? theme.secondary : theme.textSecondary} />
+            icon: <MaterialIcons name="route" size={16} color={searchType === "srcDest" ? "#5a3a00" : theme.textSecondary} />
           },
           { 
-            key: "srcDestStop", 
-            label: "VIA STOP", 
-            icon: <FontAwesome5 name="map-marker-alt" size={16} color={searchType === "srcDestStop" ? theme.secondary : theme.textSecondary} />
+            key: "busNo", 
+            label: "BUS NO", 
+            icon: <FontAwesome5 name="bus" size={14} color={searchType === "busNo" ? "#5a3a00" : theme.textSecondary} />
           },
-        ].map((item) => (
+        ].map((item, idx) => (
           <TouchableOpacity
             key={item.key}
             style={[
               styles.searchTypeButton,
-              searchType === item.key && styles.searchTypeButtonActive
+              searchType === item.key && styles.searchTypeButtonActive,
+              idx === 0 && styles.leftSegment,
+              idx === 1 && styles.rightSegment
             ]}
             onPress={() => setSearchType(item.key)}
+            activeOpacity={0.9}
           >
             <View style={styles.searchTypeIcon}>
               {item.icon}
@@ -239,94 +371,123 @@ export default function SearchScreen() {
   );
 
   const renderSearchByBusNumber = () => (
-    <View style={styles.inputSection}>
-      <View style={styles.card}>
-        <View style={styles.busInputWrapper}>
-          <Text style={styles.inputLabel}>BUS NUMBER</Text>
-          <View style={styles.busNumberInputContainer}>
-            <FontAwesome5 name="bus" size={20} color={theme.textTertiary} style={styles.busInputIcon} />
-            <TextInput
-              style={styles.busNumberInput}
-              placeholder="27"
-              value={busNumber}
-              onChangeText={setBusNumber}
-              placeholderTextColor={theme.textTertiary}
-              keyboardType="numeric"
-              textAlign="center"
-              maxLength={4}
-            />
+    <View style={{ marginBottom: 20 }}>
+      <View
+        style={{
+          backgroundColor: "#ffffff",
+          padding: 15,
+          borderRadius: 22,
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 6,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+          <View
+            style={{
+              height: 48,
+              width: 48,
+              borderRadius: 24,
+              backgroundColor: "#efe2ca",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="search" size={22} color="#000" />
+          </View>
+
+          <View style={{ marginLeft: 12 }}>
+            <Text style={{ fontSize: 20, fontWeight: "700", color: "#000" }}>Spot Bus</Text>
+            <Text style={{ fontSize: 12, color: "#777" }}>Track by bus number</Text>
           </View>
         </View>
+
+        <View
+          style={{
+            borderWidth: 3,
+            borderColor: "#e6b645",
+            borderRadius: 15,
+            paddingVertical: 19,
+            alignItems: "center",
+            backgroundColor: "#fff",
+            marginBottom: 10,
+          }}
+        >
+          <TextInput
+            style={{
+              fontSize: 28,
+              fontWeight: "800",
+              color: "#555",
+              textAlign: "center",
+              letterSpacing: 2,
+              width: "100%",
+            }}
+            placeholder="27"
+            placeholderTextColor="#b0b0b0"
+            value={busNumber}
+            onChangeText={setBusNumber}
+            keyboardType="numeric"
+            maxLength={4}
+          />
+        </View>
+
+        <Text style={{ textAlign: "center", color: "#888", fontSize: 10 }}>
+          ENTER BUS NUMBER
+        </Text>
       </View>
     </View>
   );
 
   const renderSearchBySourceDest = () => (
     <View style={styles.inputSection}>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Plan Your Journey</Text>
-        
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>FROM</Text>
-          <View style={styles.inputWithIcon}>
-            <Ionicons name="location-outline" size={20} color={theme.textTertiary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.inputField}
-              placeholder="Source"
-              value={source}
-              onChangeText={setSource}
-              placeholderTextColor={theme.textTertiary}
-            />
+      <View style={styles.journeyCard}>
+        <View style={styles.journeyHeaderRow}>
+          
+          <View
+            style={{
+              height: 48,
+              width: 48,
+              borderRadius: 24,
+              backgroundColor: "#efe2ca",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="search" size={22} color="#000" />
           </View>
+          <Text style={styles.journeyTitle}>Plan Your Journey</Text>
         </View>
 
-        <View style={styles.inputSpacer} />
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>TO</Text>
-          <View style={styles.inputWithIcon}>
-            <Ionicons name="location" size={20} color={theme.textTertiary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.inputField}
-              placeholder="Destination"
-              value={destination}
-              onChangeText={setDestination}
-              placeholderTextColor={theme.textTertiary}
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.reverseButton} onPress={handleReverseRoute}>
-          <Ionicons name="swap-vertical" size={20} color={theme.secondary} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderSearchBySourceDestStop = () => (
-    <View style={styles.inputSection}>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>JOURNEY WITH STOP</Text>
-        <View style={styles.stopsContainer}>
-          {[
-            { value: source, setter: setSource, placeholder: "Departure Point", label: "FROM", icon: "location-outline" },
-            { value: stop, setter: setStop, placeholder: "Intermediate Stop", label: "VIA STOP", icon: "location" },
-            { value: destination, setter: setDestination, placeholder: "Final Destination", label: "TO", icon: "flag" },
-          ].map((item, index) => (
-            <View key={index} style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>{item.label}</Text>
-              <View style={styles.inputWithIcon}>
-                <Ionicons name={item.icon} size={20} color={theme.textTertiary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.inputField}
-                  placeholder={item.placeholder}
-                  value={item.value}
-                  onChangeText={item.setter}
-                  placeholderTextColor={theme.textTertiary}
-                />
-              </View>
+        <View style={styles.journeyInputsRow}>
+          <View style={styles.journeyInputBlock}>
+            <Text style={styles.journeyLabel}>FROM</Text>
+            <View style={styles.journeyInputBox}>
+              <TextInput
+                style={styles.journeyInput}
+                placeholder="Source"
+                value={source}
+                onChangeText={setSource}
+                placeholderTextColor="#777"
+              />
             </View>
-          ))}
+          </View>
+
+          <Text style={styles.journeyArrow}>{'>>'}</Text>
+
+          <View style={styles.journeyInputBlock}>
+            <Text style={styles.journeyLabel}>TO</Text>
+            <View style={styles.journeyInputBox}>
+              <TextInput
+                style={styles.journeyInput}
+                placeholder="Destination"
+                value={destination}
+                onChangeText={setDestination}
+                placeholderTextColor="#777"
+              />
+            </View>
+          </View>
         </View>
       </View>
     </View>
@@ -335,232 +496,332 @@ export default function SearchScreen() {
   const renderSearchButton = () => (
     <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
       <TouchableOpacity 
-        style={styles.searchButton} 
+        style={styles.searchButtonOuter}
         onPress={handleFindBus} 
         activeOpacity={0.9}
       >
-        <Text style={styles.searchButtonText}>Find Buses</Text>
-        <Ionicons name="arrow-forward" size={20} color={theme.secondary} />
+        <LinearGradient
+          start={[0, 0]}
+          end={[1, 0]}
+          colors={["#f3c156ff", "#f1b21a"]}
+          style={styles.searchButtonGradient}
+        >
+          <Text style={styles.searchButtonText}>Find Buses</Text>
+          <Ionicons name="rocket" size={18} color="#000" style={{ marginLeft: 8 }} />
+        </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
   );
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      {renderDrawer()}
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {renderHeader()}
         {renderSearchTypeSelector()}
         {searchType === "busNo" && renderSearchByBusNumber()}
         {searchType === "srcDest" && renderSearchBySourceDest()}
-        {searchType === "srcDestStop" && renderSearchBySourceDestStop()}
         {renderSearchButton()}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const createStyles = (theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 20,
-    paddingTop: 60,
-  },
-  headerSection: {
-    marginBottom: 30,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  titleContainer: {
-    flex: 1,
-  },
-  appTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: theme.primary,
-    letterSpacing: -1,
-    marginBottom: 4,
-  },
-  appSubtitle: {
-    fontSize: 16,
-    color: theme.textSecondary,
-    fontWeight: "500",
-  },
-  themeToggle: {
-    padding: 12,
-    borderRadius: 24,
-    backgroundColor: theme.uiBackground,
-    borderWidth: 1.5,
-    borderColor: theme.border,
-  },
-  searchTypeSection: {
-    marginBottom: 30,
-  },
-  sectionLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.textSecondary,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  searchTypeContainer: {
-    flexDirection: 'row',
-    backgroundColor: theme.uiBackground,
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 1.5,
-    borderColor: theme.border,
-  },
-  searchTypeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  searchTypeButtonActive: {
-    backgroundColor: theme.primary,
-  },
-  searchTypeLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.textSecondary,
-  },
-  searchTypeLabelActive: {
-    color: theme.secondary,
-  },
-  inputSection: {
-    marginBottom: 24,
-  },
-  card: {
-    backgroundColor: theme.secondary,
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1.5,
-    borderColor: theme.border,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
+const createStyles = (theme) => {
+  const GOLD_START = "#edae25ff";
+  const GOLD_END = "#f1b21a";
+  const GOLD_DARK = "#c98a00";
+  const GLASS_BG = "rgba(255,255,255,0.88)";
+  const CARD_BORDER = "rgba(255, 255, 255, 0.6)";
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.textPrimary,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  inputGroup: {
-    marginBottom: 8,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.textSecondary,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  inputWithIcon: {
-    position: 'relative',
-  },
-  inputIcon: {
-    position: 'absolute',
-    left: 16,
-    top: 16,
-    zIndex: 1,
-  },
-  inputField: {
-    borderWidth: 2,
-    borderColor: theme.border,
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    paddingLeft: 46,
-    fontSize: 16,
-    color: theme.textPrimary,
-    backgroundColor: theme.secondary,
-    fontWeight: "500",
-  },
-  inputSpacer: {
-    height: 16,
-  },
-  reverseButton: {
-    position: 'absolute',
-    right: 24,
-    top: '50%',
-    marginTop: -20,
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: theme.primary,
-  },
-  stopsContainer: {
-    gap: 16,
-  },
-  busInputWrapper: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  busNumberInputContainer: {
-    borderWidth: 3,
-    borderColor: theme.primary,
-    borderRadius: 16,
-    backgroundColor: theme.secondary,
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  busInputIcon: {
-    position: 'absolute',
-    left: 20,
-  },
-  busNumberInput: {
-    paddingVertical: 20,
-    paddingHorizontal: 40,
-    fontSize: 28,
-    fontWeight: "800",
-    color: theme.textPrimary,
-    backgroundColor: 'transparent',
-    textAlign: 'center',
-    letterSpacing: 2,
-    flex: 1,
-  },
-  searchButton: {
-    backgroundColor: theme.primary,
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 8,
-    marginBottom: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    shadowColor: theme.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
+    scrollContainer: {
+      flexGrow: 1,
+      padding: 20,
+      paddingTop: 60,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  searchButtonText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.secondary,
-  },
-});
+    headerSection: {
+      marginBottom: 26,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    hamburgerButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: '#fff',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    headerTitleContainer: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '900',
+      color: '#D4A53A',
+      textAlign: "left",
+    },
+    // Drawer Styles - Updated to match your reference image
+    drawerOverlay: {
+      flex: 1,
+      flexDirection: 'row',
+    },
+    drawerBackdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    drawerContainer: {
+      width: DRAWER_WIDTH,
+      height: '100%',
+      position: 'absolute',
+      left: 0,
+      top: 0,
+    },
+    drawerContent: {
+      flex: 1,
+      backgroundColor: '#F5E8D6', // Your theme background color
+    },
+    drawerHeader: {
+      alignItems: 'center',
+      paddingVertical: 25,
+      paddingHorizontal: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: '#E0E0E0',
+    },
+    logoContainer: {
+      marginBottom: 16,
+    },
+    logoCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: '#fff',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 3,
+      borderColor: '#D4A53A',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    drawerAppName: {
+      fontSize: 28,
+      fontWeight: '900',
+      color: '#D4A53A',
+      letterSpacing: 1,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    drawerVersion: {
+      fontSize: 14,
+      color: '#5A5A5A',
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    drawerMenuSection: {
+      flex: 1,
+      paddingVertical: 20,
+    },
+    drawerMenuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 15,
+      paddingHorizontal: 25,
+    },
+    drawerMenuText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: '#333333',
+      marginLeft: 20,
+    },
+    menuDivider: {
+      height: 1,
+      backgroundColor: '#E0E0E0',
+      marginVertical: 10,
+      marginHorizontal: 25,
+    },
+    drawerFooter: {
+      padding: 25,
+      alignItems: 'center',
+      borderTopWidth: 1,
+      borderTopColor: '#E0E0E0',
+    },
+    drawerFooterText: {
+      fontSize: 14,
+      color: '#5A5A5A',
+      fontWeight: '500',
+      textAlign: 'center',
+    },
+    searchTypeSection: {
+      marginBottom: 24,
+    },
+    sectionLabel: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: theme.textSecondary,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    searchTypeContainer: {
+      flexDirection: 'row',
+      backgroundColor: GLASS_BG,
+      borderRadius: 40,
+      padding: 6,
+      borderWidth: 1,
+      borderColor: CARD_BORDER,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.06,
+      shadowRadius: 10,
+      elevation: 3,
+    },
+    searchTypeButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      borderRadius: 30,
+      gap: 8,
+      zIndex: 2,
+    },
+    leftSegment: {
+      borderTopLeftRadius: 30,
+      borderBottomLeftRadius: 30,
+    },
+    rightSegment: {
+      borderTopRightRadius: 30,
+      borderBottomRightRadius: 30,
+    },
+    searchTypeButtonActive: {
+      backgroundColor: GOLD_START,
+      borderWidth: 0,
+      shadowColor: GOLD_DARK,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.18,
+      shadowRadius: 12,
+      elevation: 5,
+    },
+    searchTypeIcon: {
+      marginRight: 6,
+    },
+    searchTypeLabel: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: theme.textSecondary,
+      letterSpacing: 0.6,
+    },
+    searchTypeLabelActive: {
+      color: "#5a3a00",
+    },
+    inputSection: {
+      marginBottom: 18,
+    },
+    searchButtonOuter: {
+      borderRadius: 28,
+      overflow: "hidden",
+      marginTop: 14,
+      marginBottom: 28,
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: 420,
+      shadowColor: GOLD_DARK,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.2,
+      shadowRadius: 24,
+      elevation: 8,
+    },
+    searchButtonGradient: {
+      paddingVertical: 18,
+      paddingHorizontal: 26,
+      borderRadius: 28,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+    },
+    searchButtonText: {
+      fontSize: 18,
+      fontWeight: "800",
+      color: "#000",
+      marginRight: 8,
+      textShadowColor: "rgba(0,0,0,0.08)",
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 6,
+    },
+    journeyCard: {
+      backgroundColor: "#ffffff",
+      padding: 26,
+      borderRadius: 22,
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 6,
+    },
+    journeyHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 8,
+      gap: 10,
+    },
+    journeyTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: "#000",
+    },
+    journeyInputsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    journeyInputBlock: {
+      flex: 1,
+    },
+    journeyLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: "#555",
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    journeyInputBox: {
+      borderWidth: 2,
+      borderColor: "#f0c876",
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: "#fff",
+      alignItems: "center",
+    },
+    journeyInput: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#222",
+      textAlign: "center",
+    },
+    journeyArrow: {
+      marginBottom: -28,
+      marginHorizontal: 12,
+      fontSize: 22,
+      fontWeight: "900",
+      color: "#444",
+    },
+  });
+};
