@@ -37,8 +37,20 @@ export default function SearchScreen() {
   const [buttonScale] = useState(new Animated.Value(1));
   const [drawerVisible, setDrawerVisible] = useState(false);
   const drawerAnimation = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  
+  // Animation values for the radio switch
+  const backgroundPosition = useRef(new Animated.Value(searchType === "srcDest" ? 0 : 1)).current;
 
   const styles = createStyles(theme);
+
+  // Update animation when searchType changes
+  useEffect(() => {
+    Animated.timing(backgroundPosition, {
+      toValue: searchType === "srcDest" ? 0 : 1,
+      duration: 400,
+      useNativeDriver: false,
+    }).start();
+  }, [searchType]);
 
   // WebSocket Connection
   useEffect(() => {
@@ -331,41 +343,63 @@ export default function SearchScreen() {
     <View style={styles.searchTypeSection}>
       <View style={{ marginTop: 40 }} />
       <Text style={styles.sectionLabel}>Choose Search Method</Text>
-      <View style={styles.searchTypeContainer}>
-        {[
-          { 
-            key: "srcDest", 
-            label: "DIRECT", 
-            icon: <MaterialIcons name="route" size={16} color={searchType === "srcDest" ? "#5a3a00" : theme.textSecondary} />
-          },
-          { 
-            key: "busNo", 
-            label: "BUS NO", 
-            icon: <FontAwesome5 name="bus" size={14} color={searchType === "busNo" ? "#5a3a00" : theme.textSecondary} />
-          },
-        ].map((item, idx) => (
-          <TouchableOpacity
-            key={item.key}
-            style={[
-              styles.searchTypeButton,
-              searchType === item.key && styles.searchTypeButtonActive,
-              idx === 0 && styles.leftSegment,
-              idx === 1 && styles.rightSegment
-            ]}
-            onPress={() => setSearchType(item.key)}
-            activeOpacity={0.9}
-          >
-            <View style={styles.searchTypeIcon}>
-              {item.icon}
-            </View>
-            <Text style={[
-              styles.searchTypeLabel,
-              searchType === item.key && styles.searchTypeLabelActive
-            ]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      
+      {/* Animated Radio Switch Container */}
+      <View style={styles.radioSwitchContainer}>
+        {/* Background Slider */}
+        <Animated.View 
+          style={[
+            styles.radioBackground,
+            {
+              left: backgroundPosition.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['2%', '50%']
+              })
+            }
+          ]} 
+        />
+        
+        {/* DIRECT Option */}
+        <TouchableOpacity
+          style={styles.radioOption}
+          onPress={() => setSearchType("srcDest")}
+          activeOpacity={0.9}
+        >
+          <View style={styles.radioIcon}>
+            <MaterialIcons 
+              name="route" 
+              size={16} 
+              color={searchType === "srcDest" ? "#5a3a00" : theme.textSecondary} 
+            />
+          </View>
+          <Text style={[
+            styles.radioLabel,
+            searchType === "srcDest" && styles.radioLabelActive
+          ]}>
+            DIRECT
+          </Text>
+        </TouchableOpacity>
+
+        {/* BUS NO Option */}
+        <TouchableOpacity
+          style={styles.radioOption}
+          onPress={() => setSearchType("busNo")}
+          activeOpacity={0.9}
+        >
+          <View style={styles.radioIcon}>
+            <FontAwesome5 
+              name="bus" 
+              size={14} 
+              color={searchType === "busNo" ? "#5a3a00" : theme.textSecondary} 
+            />
+          </View>
+          <Text style={[
+            styles.radioLabel,
+            searchType === "busNo" && styles.radioLabelActive
+          ]}>
+            BUS NO
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -676,60 +710,51 @@ const createStyles = (theme) => {
       marginBottom: 12,
       textAlign: 'center',
     },
-    searchTypeContainer: {
+    // New Radio Switch Styles
+    radioSwitchContainer: {
+      borderWidth: 2,
+      borderColor: GOLD_START,
+      borderRadius: 30,
+      position: 'relative',
       flexDirection: 'row',
+      alignItems: 'center',
+      height: 50,
+      width: '100%',
+      overflow: 'hidden',
       backgroundColor: GLASS_BG,
-      borderRadius: 40,
-      padding: 6,
-      borderWidth: 1,
-      borderColor: CARD_BORDER,
-      alignItems: "center",
-      justifyContent: "center",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.06,
-      shadowRadius: 10,
-      elevation: 3,
     },
-    searchTypeButton: {
+    radioBackground: {
+      position: 'absolute',
+      width: '48%',
+      height: 42,
+      backgroundColor: GOLD_START,
+      top: 2,
+      borderRadius: 30,
+      zIndex: 1,
+    },
+    radioOption: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 10,
-      paddingHorizontal: 8,
+      paddingVertical: 12,
       borderRadius: 30,
-      gap: 8,
+      position: 'relative',
+      overflow: 'hidden',
       zIndex: 2,
     },
-    leftSegment: {
-      borderTopLeftRadius: 30,
-      borderBottomLeftRadius: 30,
+    radioIcon: {
+      marginRight: 8,
     },
-    rightSegment: {
-      borderTopRightRadius: 30,
-      borderBottomRightRadius: 30,
-    },
-    searchTypeButtonActive: {
-      backgroundColor: GOLD_START,
-      borderWidth: 0,
-      shadowColor: GOLD_DARK,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.18,
-      shadowRadius: 12,
-      elevation: 5,
-    },
-    searchTypeIcon: {
-      marginRight: 6,
-    },
-    searchTypeLabel: {
-      fontSize: 12,
-      fontWeight: "800",
+    radioLabel: {
+      fontSize: 14,
+      fontWeight: "600",
       color: theme.textSecondary,
-      letterSpacing: 0.6,
+      letterSpacing: 0.5,
     },
-    searchTypeLabelActive: {
+    radioLabelActive: {
       color: "#5a3a00",
+      fontWeight: "bold",
     },
     inputSection: {
       marginBottom: 18,
