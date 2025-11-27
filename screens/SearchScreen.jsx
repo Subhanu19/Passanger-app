@@ -26,6 +26,87 @@ export default function SearchScreen() {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const theme = LightTheme;
+  const styles = createStyles(theme);
+
+  // Custom Animated Hamburger Component
+const AnimatedHamburger = ({ onPress, isOpen }) => {
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const bar2Scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const toValue = isOpen ? 1 : 0;
+    
+    Animated.parallel([
+      Animated.timing(rotateAnim, {
+        toValue,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bar2Scale, {
+        toValue: isOpen ? 0 : 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isOpen]);
+
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  const bar1Rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "45deg"],
+  });
+
+  const bar3Rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "-45deg"],
+  });
+
+  return (
+    <TouchableOpacity 
+      onPress={onPress} 
+      activeOpacity={0.8}
+      style={styles.hamburgerButton}
+    >
+      <Animated.View style={[styles.toggle, { transform: [{ rotate: rotation }] }]}>
+        {/* BAR 1 */}
+        <Animated.View
+          style={[
+            styles.bar,
+            styles.barSmall,
+            {
+              transform: [{ rotate: bar1Rotate }],
+            },
+          ]}
+        />
+
+        {/* BAR 2 */}
+        <Animated.View
+          style={[
+            styles.bar,
+            {
+              transform: [{ scaleX: bar2Scale }],
+            },
+          ]}
+        />
+
+        {/* BAR 3 */}
+        <Animated.View
+          style={[
+            styles.bar,
+            styles.barSmall,
+            {
+              transform: [{ rotate: bar3Rotate }],
+            },
+          ]}
+        />
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
 
   const [searchType, setSearchType] = useState("srcDest");
   const [source, setSource] = useState("");
@@ -36,12 +117,50 @@ export default function SearchScreen() {
   const [busList, setBusList] = useState([]);
   const [buttonScale] = useState(new Animated.Value(1));
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [allRoutes, setAllRoutes] = useState([]);
+  const [sourceSuggestions, setSourceSuggestions] = useState([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState([]);
+
+  // SOURCE Suggestion
+const handleSourceSuggestion = (text) => {
+  setSource(text);
+
+  if (!text.trim()) {
+    setSourceSuggestions([]);
+    return;
+  }
+
+  const filtered = allRoutes.filter((item) =>
+    item.toLowerCase().startsWith(text.toLowerCase())
+  );
+
+  setSourceSuggestions(filtered);
+};
+
+// DESTINATION Suggestion
+const handleDestinationSuggestion = (text) => {
+  setDestination(text);
+
+  if (!text.trim()) {
+    setDestinationSuggestions([]);
+    return;
+  }
+
+  const filtered = allRoutes.filter((item) =>
+    item.toLowerCase().startsWith(text.toLowerCase())
+  );
+
+  setDestinationSuggestions(filtered);
+};
+
+
+
   const drawerAnimation = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   
   // Animation values for the radio switch
   const backgroundPosition = useRef(new Animated.Value(searchType === "srcDest" ? 0 : 1)).current;
 
-  const styles = createStyles(theme);
+  
 
   // Update animation when searchType changes
   useEffect(() => {
@@ -72,6 +191,32 @@ export default function SearchScreen() {
     });
     return () => unsubscribe();
   }, [busNumber]);
+  // Fetch all available routes when screen opens
+useEffect(() => {
+  if (isFocused) {
+    fetchCurrentRoutes();
+  }
+}, [isFocused]);
+
+const fetchCurrentRoutes = async () => {
+  try {
+    const res = await fetch("https://yus.kwscloud.in/yus/get-current-bus-routes");
+    const data = await res.json();
+
+    if (Array.isArray(data)) {
+
+      const srcList = data.map(r => r.src);
+      const destList = data.map(r => r.dest);
+
+      const uniqueStops = [...new Set([...srcList, ...destList])];
+
+      setAllRoutes(uniqueStops);
+    }
+  } catch (error) {
+    console.log("Error fetching routes:", error);
+  }
+};
+
 
   // Clear fields when focused
   useEffect(() => {
@@ -326,13 +471,10 @@ export default function SearchScreen() {
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
-      <TouchableOpacity 
-        style={styles.hamburgerButton}
-        onPress={openDrawer}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="menu" size={28} color="#000" />
-      </TouchableOpacity>
+      <AnimatedHamburger 
+        onPress={drawerVisible ? closeDrawer : openDrawer}
+        isOpen={drawerVisible}
+      />
       <View style={styles.headerTitleContainer}>
         <Text style={styles.headerTitle}>YELLOH BUS</Text>
       </View>
@@ -475,58 +617,98 @@ export default function SearchScreen() {
   );
 
   const renderSearchBySourceDest = () => (
-    <View style={styles.inputSection}>
-      <View style={styles.journeyCard}>
-        <View style={styles.journeyHeaderRow}>
-          
-          <View
-            style={{
-              height: 48,
-              width: 48,
-              borderRadius: 24,
-              backgroundColor: "#efe2ca",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="search" size={22} color="#000" />
-          </View>
+  <View style={styles.inputSection}>
+    <View style={styles.journeyCard}>
+      {/* Header Row with Icon and Title */}
+      <View style={styles.journeyHeaderRow}>
+        <View style={styles.journeyIconContainer}>
+          <Ionicons name="search" size={22} color="#000" />
+        </View>
+        <View style={styles.journeyTitleContainer}>
           <Text style={styles.journeyTitle}>Plan Your Journey</Text>
         </View>
+      </View>
 
-        <View style={styles.journeyInputsRow}>
-          <View style={styles.journeyInputBlock}>
-            <Text style={styles.journeyLabel}>FROM</Text>
+      <View style={styles.journeyInputsRow}>
+        <View style={styles.journeyInputBlock}>
+          <Text style={styles.journeyLabel}>FROM</Text>
+          <View style={styles.inputContainer}>
             <View style={styles.journeyInputBox}>
               <TextInput
                 style={styles.journeyInput}
                 placeholder="Source"
                 value={source}
-                onChangeText={setSource}
+                onChangeText={handleSourceSuggestion}
                 placeholderTextColor="#777"
               />
             </View>
+            {sourceSuggestions.length > 0 && (
+              <View style={styles.suggestionBox}>
+                <ScrollView 
+                  style={styles.suggestionScroll}
+                  nestedScrollEnabled={true}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {sourceSuggestions.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.suggestionItem}
+                      onPress={() => {
+                        setSource(item);
+                        setSourceSuggestions([]);
+                      }}
+                    >
+                      <Text style={styles.suggestionText}>{item}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
+        </View>
 
-          <Text style={styles.journeyArrow}>{'>>'}</Text>
+        <Text style={styles.journeyArrow}>{'>>'}</Text>
 
-          <View style={styles.journeyInputBlock}>
-            <Text style={styles.journeyLabel}>TO</Text>
+        <View style={styles.journeyInputBlock}>
+          <Text style={styles.journeyLabel}>TO</Text>
+          <View style={styles.inputContainer}>
             <View style={styles.journeyInputBox}>
               <TextInput
                 style={styles.journeyInput}
                 placeholder="Destination"
                 value={destination}
-                onChangeText={setDestination}
+                onChangeText={handleDestinationSuggestion}
                 placeholderTextColor="#777"
               />
             </View>
+            {destinationSuggestions.length > 0 && (
+              <View style={styles.suggestionBox}>
+                <ScrollView 
+                  style={styles.suggestionScroll}
+                  nestedScrollEnabled={true}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {destinationSuggestions.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.suggestionItem}
+                      onPress={() => {
+                        setDestination(item);
+                        setDestinationSuggestions([]);
+                      }}
+                    >
+                      <Text style={styles.suggestionText}>{item}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
         </View>
       </View>
     </View>
-  );
-
+  </View>
+);
   const renderSearchButton = () => (
     <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
       <TouchableOpacity 
@@ -596,6 +778,22 @@ const createStyles = (theme) => {
       shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 3,
+    },
+    toggle: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 6,
+    },
+    bar: {
+      width: 28,
+      height: 3,
+      backgroundColor: "#D4A53A", // Changed to match your gold theme
+      borderRadius: 3,
+    },
+    barSmall: {
+      width: 20, // 70%
     },
     headerTitleContainer: {
       flex: 1,
@@ -790,63 +988,110 @@ const createStyles = (theme) => {
       textShadowOffset: { width: 0, height: 2 },
       textShadowRadius: 6,
     },
-    journeyCard: {
-      backgroundColor: "#ffffff",
-      padding: 26,
-      borderRadius: 22,
-      shadowColor: "#000",
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 8 },
-      elevation: 6,
+   journeyCard: {
+  backgroundColor: "#ffffff",
+  padding: 26,
+  borderRadius: 22,
+  shadowColor: "#000",
+  shadowOpacity: 0.08,
+  shadowRadius: 12,
+  shadowOffset: { width: 0, height: 8 },
+  elevation: 6,
+},
+journeyHeaderRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 20,
+},
+journeyIconContainer: {
+  height: 48,
+  width: 48,
+  borderRadius: 24,
+  backgroundColor: "#efe2ca",
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: 12,
+},
+journeyTitleContainer: {
+  flex: 1,
+},
+journeyTitle: {
+  fontSize: 20,
+  fontWeight: "700",
+  color: "#000",
+},
+journeyInputsRow: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+},
+journeyInputBlock: {
+  flex: 1,
+},
+journeyLabel: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#555",
+  marginBottom: 8,
+  textAlign: "center",
+},
+journeyInputBox: {
+  borderWidth: 2,
+  borderColor: "#f0c876",
+  borderRadius: 14,
+  paddingVertical: 14,
+  paddingHorizontal: 16,
+  backgroundColor: "#fff",
+  alignItems: "center",
+},
+journeyInput: {
+  fontSize: 16,
+  fontWeight: "600",
+  color: "#222",
+  textAlign: "center",
+},
+journeyArrow: {
+  marginTop: 30,
+  marginHorizontal: 12,
+  fontSize: 22,
+  fontWeight: "900",
+  color: "#444",
+},
+    // New styles for proper suggestion box positioning
+    inputContainer: {
+      position: 'relative',
+      zIndex: 1000,
     },
-    journeyHeaderRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: 8,
-      gap: 10,
-    },
-    journeyTitle: {
-      fontSize: 20,
-      fontWeight: "700",
-      color: "#000",
-    },
-    journeyInputsRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-    journeyInputBlock: {
-      flex: 1,
-    },
-    journeyLabel: {
-      fontSize: 12,
-      fontWeight: "700",
-      color: "#555",
-      marginBottom: 8,
-      textAlign: "center",
-    },
-    journeyInputBox: {
-      borderWidth: 2,
-      borderColor: "#f0c876",
-      borderRadius: 14,
-      paddingVertical: 14,
-      paddingHorizontal: 16,
+    suggestionBox: {
+      position: 'absolute',
+      top: '100%', // Position below the input box
+      left: 0,
+      right: 0,
       backgroundColor: "#fff",
-      alignItems: "center",
+      borderWidth: 1,
+      borderColor: "#f0c876",
+      borderRadius: 10,
+      marginTop: 5,
+      maxHeight: 150,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 5,
+      zIndex: 1001,
     },
-    journeyInput: {
+    suggestionScroll: {
+      maxHeight: 150,
+    },
+    suggestionItem: {
+      padding: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: "#f0f0f0",
+    },
+    suggestionText: {
       fontSize: 16,
-      fontWeight: "600",
-      color: "#222",
+      color: "#333",
       textAlign: "center",
-    },
-    journeyArrow: {
-      marginBottom: -28,
-      marginHorizontal: 12,
-      fontSize: 22,
-      fontWeight: "900",
-      color: "#444",
     },
   });
 };
