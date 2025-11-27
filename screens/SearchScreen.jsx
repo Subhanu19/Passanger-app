@@ -616,99 +616,207 @@ const fetchCurrentRoutes = async () => {
     </View>
   );
 
-  const renderSearchBySourceDest = () => (
-  <View style={styles.inputSection}>
-    <View style={styles.journeyCard}>
-      {/* Header Row with Icon and Title */}
-      <View style={styles.journeyHeaderRow}>
-        <View style={styles.journeyIconContainer}>
+  
+    const renderSearchBySourceDest = () => (
+  <View style={{ marginBottom: 20 }}>
+
+    {/* CARD */}
+    <View
+      style={{
+        backgroundColor: "#ffffff",
+        padding: 15,
+        borderRadius: 22,
+        shadowColor: "#000",
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 6,
+        overflow: "visible", // ⭐ VERY IMPORTANT
+      }}
+    >
+      {/* Header */}
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 15 }}>
+        <View
+          style={{
+            height: 48,
+            width: 48,
+            borderRadius: 24,
+            backgroundColor: "#efe2ca",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Ionicons name="search" size={22} color="#000" />
         </View>
-        <View style={styles.journeyTitleContainer}>
-          <Text style={styles.journeyTitle}>Plan Your Journey</Text>
+
+        <View style={{ marginLeft: 12 }}>
+          <Text style={{ fontSize: 20, fontWeight: "700", color: "#000" }}>Plan Your Journey</Text>
+          <Text style={{ fontSize: 12, color: "#777" }}>Find buses by route</Text>
         </View>
       </View>
 
-      <View style={styles.journeyInputsRow}>
-        <View style={styles.journeyInputBlock}>
-          <Text style={styles.journeyLabel}>FROM</Text>
-          <View style={styles.inputContainer}>
-            <View style={styles.journeyInputBox}>
-              <TextInput
-                style={styles.journeyInput}
-                placeholder="Source"
-                value={source}
-                onChangeText={handleSourceSuggestion}
-                placeholderTextColor="#777"
-              />
-            </View>
-            {sourceSuggestions.length > 0 && (
-              <View style={styles.suggestionBox}>
-                <ScrollView 
-                  style={styles.suggestionScroll}
-                  nestedScrollEnabled={true}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {sourceSuggestions.map((item, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.suggestionItem}
-                      onPress={() => {
-                        setSource(item);
-                        setSourceSuggestions([]);
-                      }}
-                    >
-                      <Text style={styles.suggestionText}>{item}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+      {/* SIDE BY SIDE */}
+      <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+
+        {/* FROM */}
+        <View style={{ flex: 1, marginRight: 10, position: "relative" }}>
+          <Text style={{ color: "#888", fontSize: 12, marginBottom: 6 }}>FROM</Text>
+
+          <View
+            style={{
+              borderWidth: 3,
+              borderColor: "#e6b645",
+              borderRadius: 18,
+              paddingVertical: 16,
+              paddingHorizontal: 14,
+              backgroundColor: "#fff",
+            }}
+          >
+            <TextInput
+              style={{
+                fontSize: 18,
+                fontWeight: "600",
+                color: "#555",
+              }}
+              placeholder="Source"
+              placeholderTextColor="#b0b0b0"
+              value={source}
+              onChangeText={handleSourceSuggestion}
+            />
           </View>
+
+          {/* FROM Suggestions OUTSIDE CARD */}
+          {sourceSuggestions.length > 0 && (
+            <View
+              style={{
+                position: "absolute",
+                top: 100,   // below input box
+                left: 0,
+                right: 0,
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "#ddd",
+                maxHeight: 150,
+                zIndex: 9999, // ⭐ keeps it above card
+                overflow: "hidden",
+              }}
+            >
+              <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                {sourceSuggestions.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={{
+                      padding: 12,
+                      borderBottomWidth: 1,
+                      borderColor: "#eee",
+                    }}
+                    onPress={() => {
+                      setSource(item);
+                      setSourceSuggestions([]);
+                    }}
+                  >
+                    <Text style={{ color: "#555" }}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
 
-        <Text style={styles.journeyArrow}>{'>>'}</Text>
-
-        <View style={styles.journeyInputBlock}>
-          <Text style={styles.journeyLabel}>TO</Text>
-          <View style={styles.inputContainer}>
-            <View style={styles.journeyInputBox}>
-              <TextInput
-                style={styles.journeyInput}
-                placeholder="Destination"
-                value={destination}
-                onChangeText={handleDestinationSuggestion}
-                placeholderTextColor="#777"
-              />
-            </View>
-            {destinationSuggestions.length > 0 && (
-              <View style={styles.suggestionBox}>
-                <ScrollView 
-                  style={styles.suggestionScroll}
-                  nestedScrollEnabled={true}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {destinationSuggestions.map((item, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.suggestionItem}
-                      onPress={() => {
-                        setDestination(item);
-                        setDestinationSuggestions([]);
-                      }}
-                    >
-                      <Text style={styles.suggestionText}>{item}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
+        {/* ARROW */}
+        <View
+          style={{
+            width: 50,
+            height: 90,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 34,
+              fontWeight: "900",
+              color: "#444",
+              marginTop: -5,
+            }}
+          >
+            {">>"}
+          </Text>
         </View>
+
+        {/* TO */}
+        <View style={{ flex: 1, marginLeft: 10, position: "relative" }}>
+          <Text style={{ color: "#888", fontSize: 12, marginBottom: 6 }}>TO</Text>
+
+          <View
+            style={{
+              borderWidth: 3,
+              borderColor: "#e6b645",
+              borderRadius: 18,
+              paddingVertical: 16,
+              paddingHorizontal: 14,
+              backgroundColor: "#fff",
+            }}
+          >
+            <TextInput
+              style={{
+                fontSize: 18,
+                fontWeight: "600",
+                color: "#555",
+              }}
+              placeholder="Destination"
+              placeholderTextColor="#b0b0b0"
+              value={destination}
+              onChangeText={handleDestinationSuggestion}
+            />
+          </View>
+
+          {/* TO Suggestions OUTSIDE CARD */}
+          {destinationSuggestions.length > 0 && (
+            <View
+              style={{
+                position: "absolute",
+                top: 100,
+                left: 0,
+                right: 0,
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "#ddd",
+                maxHeight: 150,
+                zIndex: 9999,
+                overflow: "hidden",
+              }}
+            >
+              <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                {destinationSuggestions.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={{
+                      padding: 12,
+                      borderBottomWidth: 1,
+                      borderColor: "#eee",
+                    }}
+                    onPress={() => {
+                      setDestination(item);
+                      setDestinationSuggestions([]);
+                    }}
+                  >
+                    <Text style={{ color: "#555" }}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+
       </View>
     </View>
   </View>
 );
+
+
   const renderSearchButton = () => (
     <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
       <TouchableOpacity 
@@ -988,21 +1096,24 @@ const createStyles = (theme) => {
       textShadowOffset: { width: 0, height: 2 },
       textShadowRadius: 6,
     },
-   journeyCard: {
-  backgroundColor: "#ffffff",
-  padding: 26,
-  borderRadius: 22,
-  shadowColor: "#000",
-  shadowOpacity: 0.08,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 8 },
-  elevation: 6,
-},
-journeyHeaderRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginBottom: 20,
-},
+     inputSection: {
+    marginBottom: 20,
+  },
+  journeyCard: {
+    backgroundColor: "#ffffff",
+    padding: 15,
+    borderRadius: 22,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+jjourneyHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+  },
 journeyIconContainer: {
   height: 48,
   width: 48,
@@ -1051,12 +1162,13 @@ journeyInput: {
   textAlign: "center",
 },
 journeyArrow: {
-  marginTop: 30,
-  marginHorizontal: 12,
-  fontSize: 22,
+  fontSize: 34,
   fontWeight: "900",
   color: "#444",
+  includeFontPadding: false, // removes weird top spacing
+  textAlignVertical: "center", // Android perfect centering
 },
+
     // New styles for proper suggestion box positioning
     inputContainer: {
       position: 'relative',
