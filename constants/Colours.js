@@ -1,4 +1,3 @@
-// constants/Colors.js
 export const LightTheme = {
   // Core Brand Colors
   primary: "#D4A53A",      // Muted golden yellow (logo, active tab, buttons)
@@ -18,27 +17,6 @@ export const LightTheme = {
   // Button Gradient Colors
   goldGradientStart: "#E4BC48", // Brighter gold
   goldGradientEnd: "#C99C2E",   // Deeper gold
-};
-
-export const DarkTheme = {
-  // Core Brand Colors
-  primary: "#D4A53A",      // Golden yellow stays consistent
-  secondary: "#1E1E1E",    // Dark charcoal (cards)
-  background: "#121212",   // Near-black background
-  
-  // Text Colors
-  textPrimary: "#FFFFFF",  // White (main text)
-  textSecondary: "#B0B0B0",// Light grey (secondary text)
-  textTertiary: "#757575", // Medium grey (placeholder)
-  
-  // UI & Border Colors
-  uiBackground: "#2A2A2A", // Dark grey (UI elements)
-  border: "#3A3A3A",       // Dark border
-  borderActive: "#D4A53A", // Golden border (active states)
-  
-  // Button Gradient
-  goldGradientStart: "#E4BC48",
-  goldGradientEnd: "#C99C2E",
 };
 
 export default LightTheme;
