@@ -12,6 +12,7 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import webSocketService from "../services/WebSocketService";
+import { Ionicons, FontAwesome, MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 
 // Helper to calculate distance (Haversine formula)
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -33,7 +34,6 @@ export default function BusListScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { theme } = useTheme();
-
   const {
     src,
     dest,
@@ -48,7 +48,7 @@ export default function BusListScreen() {
   const [buses, setBuses] = useState(initialBuses || []);
   const [loading, setLoading] = useState(!initialBuses);
   const [error, setError] = useState(null);
-
+  const GOLD_START = "#edae25ff";
   const actualSource = src || source;
   const actualDestination = dest || destination;
 
@@ -59,49 +59,50 @@ export default function BusListScreen() {
 
   // ----- Fetch buses -----
   useEffect(() => {
+    console.log("current buses - ",buses)
     if (initialBuses && initialBuses.length > 0) {
+      
       setLoading(false);
       return;
     }
 
-    const fetchBusRoutes = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        let url = "";
+    // const fetchBusRoutes = async () => {
+    //   try {
+    //     setLoading(true);
+    //     setError(null);
+    //     let url = "";
 
-        if (
-          searchType === "srcDestStop" &&
-          actualSource &&
-          actualDestination &&
-          stop
-        ) {
-          url = `https://yus.kwscloud.in/yus/src-${actualSource}&dest-${actualDestination}&stop-${stop}`;
-        } else if (actualSource && actualDestination) {
-          url = `https://yus.kwscloud.in/yus/src-${actualSource}&dest-${actualDestination}`;
-        } else {
-          setLoading(false);
-          return;
-        }
+    //     if (
+    //       searchType === "srcDestStop" &&
+    //       actualSource &&
+    //       actualDestination &&
+    //       stop
+    //     ) {
+    //       url = `https://yus.kwscloud.in/yus/src-${actualSource}&dest-${actualDestination}&stop-${stop}`;
+    //     } else if (actualSource && actualDestination) {
+    //       url = `https://yus.kwscloud.in/yus/src-${actualSource}&dest-${actualDestination}`;
+    //     } else {
+    //       setLoading(false);
+    //       return;
+    //     }
 
-        const res = await fetch(url);
-        const data = await res.json();
+    //     const res = await fetch(url);
+    //     const data = await res.json();
 
-        if (data && data !== "null") {
-          setBuses(Array.isArray(data) ? data : [data]);
-        } else {
-          setBuses([]);
-          setError("No buses found for your search criteria.");
-        }
-      } catch (err) {
-        console.error("Error fetching bus routes:", err);
-        setError("Failed to load buses. Please check your connection.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    //     if (data && data !== "null") {
+    //       setBuses(Array.isArray(data) ? data : [data]);
+    //     } else {
+    //       setBuses([]);
+    //       setError("No buses found for your search criteria.");
+    //     }
+    //   } catch (err) {
+    //     console.error("Error fetching bus routes:", err);
+    //     setError("Failed to load buses. Please check your connection.");
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
 
-    if (actualSource && actualDestination) fetchBusRoutes();
   }, [actualSource, actualDestination, stop, searchType, busNumber, initialBuses]);
 
   // ----- WebSocket: Real-time updates -----
@@ -135,12 +136,10 @@ export default function BusListScreen() {
         }
 
         if (!initialized) {
-          // Jump immediately on first update
           setCurrentStopIndex(nearestIndex);
           busAnim.setValue(nearestIndex);
           setInitialized(true);
         } else {
-          // Smoothly animate to new position
           Animated.timing(busAnim, {
             toValue: nearestIndex,
             duration: 800,
@@ -162,16 +161,15 @@ export default function BusListScreen() {
     }
 
     const payload = {
-      action: "select_bus",
       bus_id: bus.bus_id,
       route_id: bus.route_id,
       route_name: bus.route_name,
       driver_id: bus.driver_id,
       direction: bus.direction,
-      timestamp: new Date().toISOString(),
     };
 
     webSocketService.send(payload);
+    
     navigation.navigate("Schedule", {
       busObject: bus,
       searchType,
@@ -184,61 +182,57 @@ export default function BusListScreen() {
 
   // ----- Render bus card -----
   const renderBusCard = ({ item }) => {
-    const activeIndex = currentStopIndex;
-
     return (
       <Pressable
         style={({ pressed }) => [
-          styles.card,
-          { borderColor: theme.primary },
-          pressed && styles.cardPressed,
+          styles.busCard,
+          pressed && { transform: [{ scale: 0.98 }] }
         ]}
         onPress={() => handleBusPress(item)}
       >
-        <View style={styles.cardHeader}>
-          <Text style={[styles.busNumber, { color: theme.primary }]}>
-            Bus #{item.bus_id}
-          </Text>
-          <Text style={[styles.duration, { color: theme.textLight }]}>
-            {item.stops?.length || 0} stops
-          </Text>
+        {/* Header Row */}
+        <View style={styles.cardTopRow}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
+            <Text style={styles.cardBusNumber}>Bus - {item.bus_id}</Text>
+            
+            <View style={styles.busIconCircle}>
+              <MaterialCommunityIcons name="bus" size={32} color="#FFF" />
+            </View>
+          </View>
+
+          <View style={styles.stopPill}>
+            <Text style={styles.stopPillText}>
+              {item.stops?.length || 0} stops
+            </Text>
+          </View>
         </View>
 
-        <Text style={[styles.route, { color: theme.textDark }]}>
-          {item.route_name}
-        </Text>
+        {/* Route Title */}
+        <Text style={styles.cardRouteTitle}>{item.route_name}</Text>
 
-        {/* <View style={styles.stopList}>
-          {item.stops?.map((stop, index) => {
-            const isActive = index === activeIndex;
-            return (
-              <View key={index} style={styles.stopRow}>
-                <View
-                  style={[
-                    styles.stopDot,
-                    {
-                      backgroundColor: isActive
-                        ? theme.primary
-                        : theme.textLight,
-                      transform: [{ scale: isActive ? 1.2 : 1 }],
-                    },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.stopText,
-                    {
-                      color: isActive ? theme.primary : theme.textDark,
-                      fontWeight: isActive ? "700" : "400",
-                    },
-                  ]}
-                >
-                  {stop.location_name}
-                </Text>
-              </View>
-            );
-          })}
-        </View> */}
+        {/* Path Row */}
+        <View style={styles.pathRow}>
+          <View style={styles.pathGraphic}>
+            <View style={styles.iconWithLabel}>
+              {/* <MaterialIcons name="home" size={35} color="#E07B39" /> */}
+              <MaterialCommunityIcons name="bus-stop-uncovered" size={40} color={GOLD_START} />
+              <Text style={styles.stopLabel}>{item.stops?.[0]?.location_name}</Text>
+            </View>
+
+            <View style={styles.dottedLine} />
+
+            <MaterialCommunityIcons name="bus-side" size={35} color={GOLD_START}  marginTop="-59"/> 
+
+            <View style={styles.dottedLine} />
+
+            <View style={styles.iconWithLabel}>
+              <MaterialCommunityIcons name="account-school" size={35}  marginTop="7" color={GOLD_START} />
+              <Text style={styles.stopLabel}>
+                {item.stops?.[item.stops.length - 1]?.location_name}
+              </Text>
+            </View>
+          </View>
+        </View>
       </Pressable>
     );
   };
@@ -268,7 +262,7 @@ export default function BusListScreen() {
   if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color={theme.primary} />
+        <ActivityIndicator size="large" color={theme.GOLD_START} />
         <Text style={[styles.loadingText, { color: theme.textDark }]}>
           Loading buses...
         </Text>
@@ -285,7 +279,7 @@ export default function BusListScreen() {
             {error}
           </Text>
           <Pressable
-            style={[styles.retryButton, { backgroundColor: theme.primary }]}
+            style={[styles.retryButton, { backgroundColor: theme.GOLD_START }]}
             onPress={() => navigation.goBack()}
           >
             <Text style={[styles.retryButtonText, { color: theme.secondary }]}>
@@ -331,118 +325,185 @@ export default function BusListScreen() {
 
 const createStyles = (theme) =>
   StyleSheet.create({
+
     container: {
       flex: 1,
-      backgroundColor: theme.secondary,
+      backgroundColor: theme.background,
       padding: 16,
     },
+
     headerSection: {
       marginBottom: 20,
       alignItems: "center",
     },
+
     header: {
       marginTop: 50,
       fontSize: 24,
       fontWeight: "800",
       marginBottom: 8,
       textAlign: "center",
-      color: theme.primary,
+      color: theme.GOLD_START,
     },
+
     subtitle: {
       fontSize: 14,
       fontWeight: "500",
       textAlign: "center",
     },
+
     listContent: {
       paddingBottom: 20,
     },
-    card: {
-      backgroundColor: theme.secondary,
-      borderWidth: 2,
-      borderColor: theme.primary,
-      borderRadius: 16,
+
+    busCard: {
+      backgroundColor:"#fff",
+      borderRadius: 30,
       padding: 20,
-      marginBottom: 16,
+      height:200,
+      marginBottom: 18,
       shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 4,
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 8,
     },
-    cardPressed: {
-      backgroundColor: theme.isDarkMode ? "#1a1a1a" : "#f8f8f8",
-      transform: [{ scale: 0.98 }],
-    },
-    cardHeader: {
+
+    cardTopRow: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 12,
+      marginBottom: 15,
     },
-    busNumber: {
-      fontSize: 20,
-      fontWeight: "800",
+
+    cardBusNumber: {
+      fontSize: 22,
+      fontWeight: "900",
+      color: "#000",
+      letterSpacing: -1,
     },
-    duration: {
-      fontSize: 14,
-      fontWeight: "600",
+
+    busIconCircle: {
+      width: 39,
+      height: 39,
+      borderRadius: 28,
+      backgroundColor: theme.GOLD_START ,
+      justifyContent: "center",
+      alignItems: "center",
     },
-    route: {
-      fontSize: 18,
+
+    stopPill: {
+      backgroundColor: "#E8DCC8",
+      paddingHorizontal: 24,
+      paddingVertical: 10,
+      borderRadius: 25,
+    },
+
+    stopPillText: {
+      fontSize: 15,
       fontWeight: "700",
-      marginBottom: 12,
+      color: "#000",
     },
-    stopList: {
+
+    cardRouteTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: "#000",
+      marginBottom: 30,
+      marginTop: -5,
+      textAlign: "left",
+    },
+
+    pathRow: {
+      marginTop: 15,
+    },
+
+    stopLabel: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: "#000",
       marginTop: 8,
-      paddingLeft: 8,
+      textAlign: "center",
     },
-    stopRow: {
+
+    pathGraphic: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 6,
+      justifyContent: "space-between",
+      marginVertical: 10,
     },
-    stopDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      marginRight: 10,
+
+    iconWithLabel: {
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop:-42,
     },
-    stopText: {
-      fontSize: 15,
+
+    dottedLine: {
+      flex: 10,
+      borderBottomWidth: 2,
+      borderStyle: "dashed",
+      borderColor: theme.GOLD_START,
+      marginHorizontal: -16,
+      marginTop:-45,
     },
+
     loader: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: theme.secondary,
     },
+
     loadingText: {
       marginTop: 16,
       fontSize: 16,
       fontWeight: "500",
     },
+
     errorContainer: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
       paddingHorizontal: 40,
     },
+
     errorText: {
       fontSize: 16,
       textAlign: "center",
       marginBottom: 24,
       lineHeight: 22,
     },
+
     retryButton: {
       paddingHorizontal: 24,
       paddingVertical: 12,
       borderRadius: 12,
       minWidth: 160,
     },
+
     retryButtonText: {
       fontSize: 16,
       fontWeight: "600",
       textAlign: "center",
     },
-  });
 
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: 40,
+    },
+
+    noData: {
+      fontSize: 18,
+      fontWeight: "600",
+      marginBottom: 8,
+    },
+
+    noDataSubtitle: {
+      fontSize: 14,
+      fontWeight: "400",
+    },
+
+  });

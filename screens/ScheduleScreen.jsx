@@ -573,7 +573,7 @@ export default function ScheduleScreen() {
             style={[
               styles.circle,
               {
-                backgroundColor: isActive ? theme.primary : isCompleted ? theme.accent : theme.border,
+                backgroundColor: isActive ? theme.GOLD_START : isCompleted ? theme.accent : theme.border,
               },
             ]}
           />
@@ -589,11 +589,11 @@ export default function ScheduleScreen() {
           {/* Stop Details - Center */}
           <View style={[styles.stopDetails, { borderBottomColor: theme.border }]}>
             <View style={styles.stopHeader}>
-              <Text style={[styles.stopName, { color: isActive ? theme.primary : isCompleted ? theme.accent : theme.textDark }]}>
+              <Text style={[styles.stopName, { color: isActive ? theme.GOLD_START : isCompleted ? theme.accent : theme.textDark }]}>
                 {item.location_name}
               </Text>
               {isActive && (
-                <View style={[styles.activeBadge, { backgroundColor: theme.primary }]}>
+                <View style={[styles.activeBadge, { backgroundColor: theme.GOLD_START }]}>
                   <Text style={styles.activeBadgeText}>CURRENT</Text>
                 </View>
               )}
@@ -641,7 +641,7 @@ export default function ScheduleScreen() {
   if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color={theme.primary} />
+        <ActivityIndicator size="large" color={theme.GOLD_START} />
         <Text style={[styles.loadingText, { color: theme.textDark }]}>Loading bus schedule...</Text>
       </View>
     );
@@ -651,10 +651,10 @@ export default function ScheduleScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.headerSection, { backgroundColor: theme.primary }]}>
+      <View style={[styles.headerSection, { backgroundColor: theme.GOLD_START }]}>
         <Text style={styles.title}>{busData.route_name}</Text>
         <Text style={styles.subtitle}>
-          Bus #{busData.bus_id} - {isUpRoute ? "UP Route (Morning)" : "DOWN Route (Evening)"} - Live Tracking
+          Bus {busData.bus_id} - {isUpRoute ? "UP Route (Morning)" : "DOWN Route (Evening)"} - Live Tracking
         </Text>
       </View>
 
@@ -674,7 +674,7 @@ export default function ScheduleScreen() {
         {/* 🚍 Bus inside timeline */}
         <View style={styles.busLayer}>
           <Animated.View style={[styles.busMovingContainer, { transform: [{ translateY: Animated.subtract(translateY, scrollY) }] }]}>
-            <View style={[styles.busIconContainer, { backgroundColor: theme.primary }]}>
+            <View style={[styles.busIconContainer, { backgroundColor: theme.GOLD_START }]}>
               <Text style={styles.busEmoji}>🚍</Text>
             </View>
           </Animated.View>
@@ -726,18 +726,18 @@ const createStyles = (theme) =>
       zIndex: 100,
       paddingBottom: 16,
       borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      borderBottomColor: theme.GOLD_START,
     },
     title: {
       fontSize: 24,
       fontWeight: "800",
-      color: theme.secondary,
+      color: theme.BLACK,
       marginBottom: 4,
       textAlign: "center",
     },
     subtitle: {
       fontSize: 14,
-      color: theme.secondary,
+      color: theme.BLACK,
       marginBottom: 16,
       textAlign: "center",
       fontWeight: "500",
@@ -767,7 +767,7 @@ const createStyles = (theme) =>
       top: 8,
       width: 2,
       height: "100%",
-      backgroundColor: theme.border,
+      backgroundColor: "#fff",
     },
     progressLine: {
       position: "absolute",

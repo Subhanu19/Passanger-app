@@ -93,7 +93,7 @@ const createStyles = (theme) => StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: "bold",
-    color: theme.primary,
+    color: theme.GOLD_START,
     marginBottom: 6,
   },
   subtitle: {

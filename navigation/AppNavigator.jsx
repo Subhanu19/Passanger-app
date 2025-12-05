@@ -8,12 +8,11 @@ import SplashScreen from "../screens/SplashScreen";
 import SearchScreen from "../screens/SearchScreen";
 import BusListScreen from "../screens/BusListScreen";
 import ScheduleScreen from "../screens/ScheduleScreen";
-
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   const { theme } = useTheme();
-
+ 
   return (
     <NavigationContainer>
       <Stack.Navigator 

@@ -1,7 +1,7 @@
 // Image URL (uploaded file):
 // /mnt/data/WhatsApp Image 2025-11-23 at 6.36.05 PM.jpeg
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, act } from "react";
 import {
   View,
   Text,
@@ -31,23 +31,23 @@ export default function SearchScreen() {
   const theme = LightTheme;
   const styles = createStyles(theme);
 
-  // Custom Animated Hamburger Component
-const AnimatedHamburger = ({ onPress, isOpen }) => {
+
+const AnimatedHamburger = ({ onPress, isOpen, style }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const bar2Scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const toValue = isOpen ? 1 : 0;
-    
+
     Animated.parallel([
       Animated.timing(rotateAnim, {
         toValue,
-        duration: 500,
+        duration: 400,
         useNativeDriver: true,
       }),
       Animated.timing(bar2Scale, {
         toValue: isOpen ? 0 : 1,
-        duration: 500,
+        duration: 400,
         useNativeDriver: true,
       }),
     ]).start();
@@ -69,43 +69,36 @@ const AnimatedHamburger = ({ onPress, isOpen }) => {
   });
 
   return (
-    <TouchableOpacity 
-      onPress={onPress} 
+    <TouchableOpacity
+      onPress={onPress}
       activeOpacity={0.8}
-      style={styles.hamburgerButton}
+      style={[styles.hamburgerButton, style]}
     >
       <Animated.View style={[styles.toggle, { transform: [{ rotate: rotation }] }]}>
-        {/* BAR 1 */}
+        
         <Animated.View
           style={[
             styles.bar,
             styles.barSmall,
-            {
-              transform: [{ rotate: bar1Rotate }],
-            },
+            { transform: [{ rotate: bar1Rotate }] },
           ]}
         />
 
-        {/* BAR 2 */}
         <Animated.View
           style={[
             styles.bar,
-            {
-              transform: [{ scaleX: bar2Scale }],
-            },
+            { transform: [{ scaleX: bar2Scale }] },
           ]}
         />
 
-        {/* BAR 3 */}
         <Animated.View
           style={[
             styles.bar,
             styles.barSmall,
-            {
-              transform: [{ rotate: bar3Rotate }],
-            },
+            { transform: [{ rotate: bar3Rotate }] },
           ]}
         />
+
       </Animated.View>
     </TouchableOpacity>
   );
@@ -121,6 +114,7 @@ const AnimatedHamburger = ({ onPress, isOpen }) => {
   const [buttonScale] = useState(new Animated.Value(1));
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [allRoutes, setAllRoutes] = useState([]);
+  const [allLocations, setAllLocations] = useState([]);
   const [sourceSuggestions, setSourceSuggestions] = useState([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState([]);
 
@@ -133,7 +127,7 @@ const handleSourceSuggestion = (text) => {
     return;
   }
 
-  const filtered = allRoutes.filter((item) =>
+  const filtered = allLocations.filter((item) =>
     item.toLowerCase().startsWith(text.toLowerCase())
   );
 
@@ -149,7 +143,7 @@ const handleDestinationSuggestion = (text) => {
     return;
   }
 
-  const filtered = allRoutes.filter((item) =>
+  const filtered = allLocations.filter((item) =>
     item.toLowerCase().startsWith(text.toLowerCase())
   );
 
@@ -183,38 +177,70 @@ const handleDestinationSuggestion = (text) => {
   }, [isFocused]);
 
   // Subscribe to bus updates
-  useEffect(() => {
-    const unsubscribe = webSocketService.subscribe((data) => {
-      if (data.type === "bus_update" && data.bus_id === busNumber) {
-        setBusPreview((prev) => ({ ...prev, ...data }));
-      }
-      if (Array.isArray(data)) {
-        setBusList(data);
-      }
-    });
-    return () => unsubscribe();
-  }, [busNumber]);
+  // useEffect(() => {
+  //   const unsubscribe = webSocketService.subscribe((data) => {
+  //     if (data.type === "bus_update" && data.bus_id === busNumber) {
+  //       setBusPreview((prev) => ({ ...prev, ...data }));
+  //     }
+  //     if (Array.isArray(data)) {
+  //       setBusList(data);
+  //     }
+  //   });
+  //   return () => unsubscribe();
+  // }, [busNumber]);
+  
   // Fetch all available routes when screen opens
-useEffect(() => {
+
+  useEffect(() => {
   if (isFocused) {
     fetchCurrentRoutes();
   }
 }, [isFocused]);
+
+function convertToRoutes(data){
+   if (Array.isArray(data)) {
+
+    if(data.length==0){
+      return null
+    }
+      const routes = data
+        .filter(item => item.stops !== null)   // remove only routes with null stops
+        .map(item => ({
+          route_id: item.route_id,
+          bus_id: item.bus_id,
+          driver_id:item.driver_id,
+          direction: item.direction,
+          route_name: item.route_name,
+          src: item.src,
+          dest: item.dest,
+          stops: item.stops,     // already guaranteed not null
+          is_Stop: item.is_Stop
+    }));
+
+    return routes
+  }
+}
 
 const fetchCurrentRoutes = async () => {
   try {
     const res = await fetch("https://yus.kwscloud.in/yus/get-current-bus-routes");
     const data = await res.json();
 
-    if (Array.isArray(data)) {
+    let routes=convertToRoutes(data)
+    setAllRoutes(routes)
 
-      const srcList = data.map(r => r.src);
-      const destList = data.map(r => r.dest);
+    // 2️⃣ Collect ALL src + dest from every route (even null-stops)
+      const srcDestList = [
+        ...data.map(r => r.src),
+        ...data.map(r => r.dest)
+      ];
 
-      const uniqueStops = [...new Set([...srcList, ...destList])];
+      // 3️⃣ Remove duplicates + nulls
+      const uniqueSrcDest = [...new Set(srcDestList.filter(Boolean))];
 
-      setAllRoutes(uniqueStops);
-    }
+      // Save for search box
+      setAllLocations(uniqueSrcDest);
+
   } catch (error) {
     console.log("Error fetching routes:", error);
   }
@@ -262,24 +288,55 @@ const fetchCurrentRoutes = async () => {
 
   // Fetch bus preview
   const fetchBusPreview = async (text) => {
-    if (!text.trim()) {
+
+   let busID_to_search= text.trim()
+
+    if (!busID_to_search) {
       setBusPreview(null);
       return;
     }
-    try {
-      const response = await fetch(
-        `https://yus.kwscloud.in/yus/get-route?bus_id=${text.trim()}`
-      );
-      const data = await response.json();
-      if (data.route_id !== 0 && data.bus_id !== 0) {
-        setBusPreview(data);
-        webSocketService.send({ action: "subscribe_bus", bus_id: text.trim() });
-      } else {
-        setBusPreview(null);
-      }
-    } catch (error) {
-      setBusPreview(null);
-    }
+
+    //fastest logic
+    const foundRoute = allRoutes.find(r => r.bus_id == busID_to_search);
+    setBusPreview(foundRoute || null); // if not found → null
+
+
+
+            //simplest logic
+
+    // let busID_found = false;
+
+    // for(let i=0;i<allRoutes.length;i++){
+    //   if(allRoutes[i].bus_id==busID_to_search){
+    //     busID_found = true
+    //     setBusPreview(allRoutes[i]) //set the available searched route for preview
+    //   }
+    // }
+
+    // if (!busID_found){
+    //    setBusPreview(null);
+    // }
+
+
+
+    
+
+    // try {
+
+    // console.log("request made ")
+    //           const response = await fetch(
+    //             `https://yus.kwscloud.in/yus/get-route?bus_id=${busID_to_search}`
+    //           );
+    //           const data = await response.json();
+    //           if (data.route_id !== 0 && data.bus_id !== 0) {
+    //             setBusPreview(data);
+    //             webSocketService.send({ action: "subscribe_bus", bus_id: busID_to_search });
+    //           } else {
+    //             setBusPreview(null);
+    //           }
+    //         } catch (error) {
+    //           setBusPreview(null);
+    //         }
   };
 
   // Debounce bus number input
@@ -309,168 +366,205 @@ const fetchCurrentRoutes = async () => {
           Alert.alert("Missing Fields", "Please enter both source and destination.");
           return;
         }
-        webSocketService.send({
-          action: "search_buses",
-          src: source.trim(),
-          dest: destination.trim(),
-        });
+      
+        const foundRoute = allRoutes.filter(
+            r => r.src == source.trim() && r.dest == destination.trim()
+        );
+
+        let actual_route = foundRoute
+        if (foundRoute.length==0){
+          const url = `https://yus.kwscloud.in/yus/src-${source.trim()}&dest-${destination.trim()}`;
+          const response = await fetch(url);
+          const data = await response.json();
+          let route = convertToRoutes(data)
+
+          if (route==null){
+            Alert.alert("Not Found", "No Bus found with this source and destination.");
+            setSource("")
+            setDestination("")
+            return;
+          }
+
+          actual_route = route
+
+          // 1. Add route(s)
+          if (Array.isArray(route)) {
+            setAllRoutes(prev => [...prev, ...route]);
+          } else {
+            setAllRoutes(prev => [...prev, route]);
+          }
+
+          // 2. Add source & destination safely
+          setAllLocations(prev => {
+            const updated = [...prev, route.src, route.dest];
+            return [...new Set(updated)];   // remove duplicates
+          });
+
+        }
+
+        if(!Array.isArray(actual_route)){
+          actual_route = [actual_route]
+        }
+
+        console.log("actual route - ",actual_route)
         navigation.navigate("BusList", { 
+          buses: actual_route,
           src: source, 
           dest: destination, 
-          buses: busList,
           searchType: "srcDest" 
         });
-      } else if (searchType === "srcDestStop") {
-        if (!source.trim() || !destination.trim() || !stop.trim()) {
-          Alert.alert("Missing Fields", "Please enter source, destination, and stop.");
-          return;
-        }
-        const url = `https://yus.kwscloud.in/yus/src-${source.trim()}&dest-${destination.trim()}&stop-${stop.trim()}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        if (!data || data === "null" || (Array.isArray(data) && data.length === 0)) {
-          Alert.alert("Not Found", "No buses found for your search criteria.");
-          return;
-        }
-        navigation.navigate("BusList", { 
-          buses: data, 
-          searchType, 
-          source, 
-          destination, 
-          stop 
-        });
+
+      // } else if (searchType === "srcDestStop") {
+      //   if (!source.trim() || !destination.trim() || !stop.trim()) {
+      //     Alert.alert("Missing Fields", "Please enter source, destination, and stop.");
+      //     return;
+      //   }
+      //   const url = `https://yus.kwscloud.in/yus/src-${source.trim()}&dest-${destination.trim()}&stop-${stop.trim()}`;
+      //   const response = await fetch(url);
+      //   const data = await response.json();
+      //   if (!data || data === "null" || (Array.isArray(data) && data.length === 0)) {
+      //     Alert.alert("Not Found", "No buses found for your search criteria.");
+      //     return;
+      //   }
+      //   navigation.navigate("BusList", { 
+      //     buses: data, 
+      //     searchType, 
+      //     source, 
+      //     destination, 
+      //     stop 
+      //   });
       } else if (searchType === "busNo") {
         if (!busNumber.trim()) {
           Alert.alert("Missing Field", "Please enter bus number.");
           return;
         }
-        const url = `https://yus.kwscloud.in/yus/get-route?bus_id=${busNumber.trim()}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data.route_id === 0 && data.bus_id === 0) {
-          Alert.alert("Not Found", "No bus found with this number.");
-          return;
-        }
+
+
+          //fastest logic
+          const foundRoute = allRoutes.find(r => r.bus_id == busNumber.trim());
+          
+          if(foundRoute==undefined){
+                Alert.alert("Not Found", "No bus found with this number.");
+                return;
+          }
+          
         navigation.navigate("BusList", { 
-          buses: [data], 
+          buses: [foundRoute], 
           searchType: "busNo", 
-          busNumber 
+          busNumber :foundRoute.bus_id
         });
       }
     } catch (error) {
+      console.log("error - ",error)
       Alert.alert("Error", "Failed to search for buses. Please try again.");
     }
   };
 
   const renderDrawer = () => (
-    <Modal
-      visible={drawerVisible}
-      transparent
-      animationType="none"
-      onRequestClose={closeDrawer}
-    >
-      <View style={styles.drawerOverlay}>
-        <TouchableOpacity 
-          style={styles.drawerBackdrop} 
-          activeOpacity={1} 
-          onPress={closeDrawer}
-        />
-        <Animated.View
-          style={[
-            styles.drawerContainer,
-            { transform: [{ translateX: drawerAnimation }] },
-          ]}
-        >
-          <View style={styles.drawerContent}>
-            {/* Header Section with Logo and App Name */}
-            <View style={styles.drawerHeader}>
-              <View style={styles.logoContainer}>
-                <View style={styles.logoCircle}>
-                  <Ionicons name="bus" size={40} color="#D4A53A" />
-                </View>
+  <Modal
+    visible={drawerVisible}
+    transparent
+    animationType="none"
+    onRequestClose={closeDrawer}
+  >
+    <View style={StyleSheet.absoluteFill}>
+  
+
+      {/* Backdrop */}
+      <TouchableOpacity 
+        style={styles.drawerBackdrop} 
+        activeOpacity={1} 
+        onPress={closeDrawer}
+      />
+
+      {/* Drawer */}
+      <Animated.View
+        style={[
+          styles.drawerContainer,
+          { transform: [{ translateX: drawerAnimation }] },
+        ]}
+      >
+        <View style={styles.drawerContent}>
+
+          {/* Header */}
+          <View style={styles.drawerHeader}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoCircle}>
+                <Ionicons name="bus" size={40} color="#D4A53A" />
               </View>
-              <Text style={styles.drawerAppName}>YELLOH BUS</Text>
-              <Text style={styles.drawerVersion}>v 1.0.0</Text>
             </View>
-
-            {/* Menu Items */}
-            <View style={styles.drawerMenuSection}>
-              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
-                closeDrawer();
-                // Navigate or perform action
-              }}>
-                <Ionicons name="home-outline" size={24} color="#333" />
-                <Text style={styles.drawerMenuText}>Home</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
-                closeDrawer();
-                // Navigate to timetable
-              }}>
-                <Ionicons name="time-outline" size={24} color="#333" />
-                <Text style={styles.drawerMenuText}>Timetable</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
-                closeDrawer();
-                // Navigate to settings
-              }}>
-                <Ionicons name="settings-outline" size={24} color="#333" />
-                <Text style={styles.drawerMenuText}>Settings</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
-                closeDrawer();
-                // Navigate to help
-              }}>
-                <Ionicons name="help-circle-outline" size={24} color="#333" />
-                <Text style={styles.drawerMenuText}>Help & Support</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
-                closeDrawer();
-                // Navigate to about
-              }}>
-                <Ionicons name="information-circle-outline" size={24} color="#333" />
-                <Text style={styles.drawerMenuText}>About</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
-                closeDrawer();
-                // Share app
-              }}>
-                <Ionicons name="share-social-outline" size={24} color="#333" />
-                <Text style={styles.drawerMenuText}>Share App</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
-                closeDrawer();
-                // Rate app
-              }}>
-                <Ionicons name="star-outline" size={24} color="#333" />
-                <Text style={styles.drawerMenuText}>Rate Us</Text>
-              </TouchableOpacity>
-
-              <View style={styles.menuDivider} />
-
-              <TouchableOpacity style={styles.drawerMenuItem} onPress={() => {
-                closeDrawer();
-                // Clear searches
-              }}>
-                <Ionicons name="trash-outline" size={24} color="#333" />
-                <Text style={styles.drawerMenuText}>Clear Recent Searches</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Footer */}
-            <View style={styles.drawerFooter}>
-              <Text style={styles.drawerFooterText}>Made with 💬 for better commute</Text>
-            </View>
+            <Text style={styles.drawerAppName}>YELLOH BUS</Text>
+            <Text style={styles.drawerVersion}>v 1.0.0</Text>
           </View>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
+
+          {/* Menu */}
+          <View style={styles.drawerMenuSection}>
+            
+            <TouchableOpacity style={styles.drawerMenuItem} onPress={closeDrawer}>
+              <Ionicons name="home-outline" size={24} color="#333" />
+              <Text style={styles.drawerMenuText}>Home</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.drawerMenuItem} onPress={closeDrawer}>
+              <Ionicons name="time-outline" size={24} color="#333" />
+              <Text style={styles.drawerMenuText}>Timetable</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.drawerMenuItem} onPress={closeDrawer}>
+              <Ionicons name="settings-outline" size={24} color="#333" />
+              <Text style={styles.drawerMenuText}>Settings</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.drawerMenuItem} onPress={closeDrawer}>
+              <Ionicons name="help-circle-outline" size={24} color="#333" />
+              <Text style={styles.drawerMenuText}>Help & Support</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.drawerMenuItem} onPress={closeDrawer}>
+              <Ionicons name="information-circle-outline" size={24} color="#333" />
+              <Text style={styles.drawerMenuText}>About</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.drawerMenuItem} onPress={closeDrawer}>
+              <Ionicons name="share-social-outline" size={24} color="#333" />
+              <Text style={styles.drawerMenuText}>Share App</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.drawerMenuItem} onPress={closeDrawer}>
+              <Ionicons name="star-outline" size={24} color="#333" />
+              <Text style={styles.drawerMenuText}>Rate Us</Text>
+            </TouchableOpacity>
+
+            <View style={styles.menuDivider} />
+
+            <TouchableOpacity style={styles.drawerMenuItem} onPress={closeDrawer}>
+              <Ionicons name="trash-outline" size={24} color="#333" />
+              <Text style={styles.drawerMenuText}>Clear Recent Searches</Text>
+            </TouchableOpacity>
+
+          </View>
+
+          {/* Footer */}
+          <View style={styles.drawerFooter}>
+            <Text style={styles.drawerFooterText}>Made with 💬 for better commute</Text>
+          </View>
+
+        </View>
+      </Animated.View>
+            <AnimatedHamburger
+        onPress={closeDrawer}
+        isOpen={drawerVisible}
+        style={{
+          position: "absolute",
+          top: 40,
+          left: 20,
+          zIndex: 9999,      // stays above drawer always
+          elevation: 9999,
+        }}
+      />
+    </View>
+  </Modal>
+);
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
@@ -584,18 +678,6 @@ const fetchCurrentRoutes = async () => {
         </View>
 
         <View
-          // style={{
-          //   borderWidth: 2,
-          //   borderColor: "#e6b645",
-          //   borderRadius: 15,
-          //   paddingVertical: 12,
-          //   paddingHorizontal: 96,
-          //   marginLeft:90,
-          //   alignItems: "center",
-          //   backgroundColor: "#fff",
-          //   marginBottom: 10,
-          //   width:150,
-          // }}
 
           style={{
             borderWidth: 3,
@@ -895,6 +977,9 @@ const createStyles = (theme) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+       zIndex: 9999,   // ⭐ VERY IMPORTANT
+  elevation: 15,  // for Android
+  position: "relative",
     },
     hamburgerButton: {
       width: 44,
@@ -907,7 +992,10 @@ const createStyles = (theme) => {
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
-      elevation: 3,
+      // elevation: 3,
+        zIndex: 99999,      // ⭐ TOP OF EVERYTHING
+  elevation: 20,      // ⭐ ANDROID
+   position: "absolute", 
     },
     toggle: {
       width: 40,
@@ -939,17 +1027,23 @@ const createStyles = (theme) => {
     drawerOverlay: {
       flex: 1,
       flexDirection: 'row',
+      zIndex: 1,         // ⭐ LOWER THAN HEADER
+      elevation: 1,
     },
     drawerBackdrop: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.5)',
+      position: "absolute",
     },
     drawerContainer: {
       width: DRAWER_WIDTH,
       height: '100%',
       position: 'absolute',
       left: 0,
-      top: 0,
+      top: 0,  
+      zIndex: 2,
+      elevation: 2,
+
     },
     drawerContent: {
       flex: 1,

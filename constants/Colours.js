@@ -1,6 +1,6 @@
 export const LightTheme = {
   // Core Brand Colors
-  primary: "#D4A53A",      // Muted golden yellow (logo, active tab, buttons)
+  primary: "#E4BC48",      // Muted golden yellow (logo, active tab, buttons)
   secondary: "#FFFFFF",    // Pure white (text on primary, cards)
   background: "#F5E8D6",   // Warm beige background
   
@@ -17,6 +17,9 @@ export const LightTheme = {
   // Button Gradient Colors
   goldGradientStart: "#E4BC48", // Brighter gold
   goldGradientEnd: "#C99C2E",   // Deeper gold
+
+   GOLD_START : "#edae25ff",
+   BLACK :"#000"
 };
 
 export default LightTheme;
